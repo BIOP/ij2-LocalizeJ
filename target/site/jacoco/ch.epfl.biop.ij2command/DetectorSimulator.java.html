@@ -1,0 +1,367 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>DetectorSimulator.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">LocalizeJ</a> &gt; <a href="index.source.html" class="el_package">ch.epfl.biop.ij2command</a> &gt; <span class="el_source">DetectorSimulator.java</span></div><h1>DetectorSimulator.java</h1><pre class="source lang-java linenums">package ch.epfl.biop.ij2command;
+import java.util.Random;
+
+import ij.IJ;
+import ij.ImagePlus;
+import ij.ImageStack;
+import ij.gui.GenericDialog;
+import ij.measure.Calibration;
+import ij.process.FloatProcessor;
+import ij.process.ImageProcessor;
+import ij.process.ShortProcessor;
+import imagescience.random.BinomialGenerator;
+import imagescience.random.GammaGenerator;
+import imagescience.random.GaussianGenerator;
+import imagescience.random.PoissonGenerator;
+import imagescience.random.RandomGenerator;
+
+
+public abstract class DetectorSimulator {
+
+<span class="nc" id="L21">	final static String []type={&quot;CCD camera&quot;,&quot;sCMOS&quot;,&quot;EM CCD&quot;};</span>
+	private double pixelSize;						//pixel size of the camera chip in um
+	private double exp;					//exposure time of the camera
+	private double quant;				//Quantum efficiency of the camera chip
+	private double dark;
+	private double cic;
+	private double read;
+<span class="nc" id="L28">	private int readoffset=000;</span>
+	
+	CameraDialog cd;
+										
+	private Calibration cal;
+	protected ImageProcessor cam_ip;
+	protected ImagePlus cam_imp;
+	private ImageStack cam_stack;
+<span class="nc" id="L36">	private boolean readNoise=false;</span>
+<span class="nc" id="L37">	private boolean PoissonNoise=false;</span>
+<span class="nc" id="L38">	private boolean DetectionNoise=false;</span>
+<span class="nc" id="L39">	private boolean gainEM=false;</span>
+	private String title;
+<span class="nc" id="L41">	private boolean stackInput=false;</span>
+	
+	/*===================================================================================================
+	 * Constructors
+	 ==================================================================================================*/
+	
+<span class="nc" id="L47">	protected DetectorSimulator(double pixelSize,double exposureTime,double quantumEff,ImageProcessor ip){</span>
+<span class="nc" id="L48">		this.pixelSize=pixelSize;</span>
+<span class="nc" id="L49">		this.exp=exposureTime;</span>
+<span class="nc" id="L50">		this.quant=quantumEff;</span>
+<span class="nc" id="L51">		this.cam_ip=new ShortProcessor(ip.getWidth(),ip.getHeight());</span>
+<span class="nc" id="L52">		this.initCalibration();</span>
+<span class="nc" id="L53">	}</span>
+<span class="nc" id="L54">	protected DetectorSimulator(ImagePlus imp,double quant, double dark, double cic, double read, double exp){</span>
+<span class="nc" id="L55">		this.quant=quant;</span>
+<span class="nc" id="L56">		this.dark=dark;</span>
+<span class="nc" id="L57">		this.cic=cic;</span>
+<span class="nc" id="L58">		this.read=read;</span>
+<span class="nc" id="L59">		this.exp=exp;</span>
+		
+<span class="nc" id="L61">		this.cal=imp.getCalibration();</span>
+<span class="nc bnc" id="L62" title="All 2 branches missed.">		if (this.cal==null) initCalibrationDialog(); </span>
+		
+<span class="nc" id="L64">		this.pixelSize=cal.pixelHeight;</span>
+<span class="nc" id="L65">		this.exp=cal.frameInterval;</span>
+<span class="nc" id="L66">		this.initCalibration();</span>
+<span class="nc" id="L67">		this.cam_imp=imp.duplicate();</span>
+<span class="nc" id="L68">		this.cam_ip=this.cam_imp.getProcessor();</span>
+		
+<span class="nc" id="L70">	}</span>
+	
+<span class="nc" id="L72">	protected DetectorSimulator(ImageProcessor ip,double quant, double dark, double cic, double read, double exp,  Calibration cal){</span>
+<span class="nc" id="L73">		this.quant=quant;</span>
+<span class="nc" id="L74">		this.dark=dark;</span>
+<span class="nc" id="L75">		this.cic=cic;</span>
+<span class="nc" id="L76">		this.read=read;</span>
+<span class="nc" id="L77">		this.exp=exp;</span>
+		
+<span class="nc" id="L79">		this.cal=cal;</span>
+<span class="nc bnc" id="L80" title="All 2 branches missed.">		if (this.cal==null) initCalibrationDialog(); </span>
+<span class="nc" id="L81">		this.cam_ip=ip;</span>
+<span class="nc" id="L82">		this.pixelSize=cal.pixelHeight;</span>
+<span class="nc" id="L83">		this.exp=cal.frameInterval;</span>
+		
+<span class="nc" id="L85">		this.initCalibration();</span>
+<span class="nc" id="L86">		this.cam_imp=new ImagePlus (&quot;Camera Simulation&quot;,ip);</span>
+		
+		
+<span class="nc" id="L89">	}</span>
+<span class="nc" id="L90">	protected DetectorSimulator(ImagePlus imp,double quantumEff){</span>
+<span class="nc" id="L91">		this.cal=imp.getCalibration();</span>
+<span class="nc bnc" id="L92" title="All 2 branches missed.">		if (this.cal==null) initCalibrationDialog(); </span>
+<span class="nc" id="L93">		this.cam_ip=new ShortProcessor(imp.getWidth(),imp.getHeight());</span>
+		
+<span class="nc" id="L95">		this.pixelSize=cal.pixelHeight;</span>
+<span class="nc" id="L96">		this.exp=cal.frameInterval;</span>
+<span class="nc" id="L97">		this.quant=quantumEff;</span>
+<span class="nc" id="L98">		this.initCalibration();</span>
+<span class="nc" id="L99">		this.cam_imp=imp.duplicate();</span>
+<span class="nc" id="L100">		this.cam_ip=this.cam_imp.getProcessor();</span>
+		
+<span class="nc" id="L102">	}</span>
+	
+<span class="nc" id="L104">	protected DetectorSimulator(ImageProcessor ip, double quantumEff, Calibration cal){</span>
+		
+<span class="nc bnc" id="L106" title="All 2 branches missed.">		if (cal==null) initCalibrationDialog();</span>
+<span class="nc" id="L107">		else this.cal=cal; </span>
+		
+<span class="nc" id="L109">		this.cam_ip=new ShortProcessor(ip.getWidth(),ip.getHeight());</span>
+<span class="nc" id="L110">		this.cam_ip=ip.duplicate();</span>
+		
+<span class="nc" id="L112">		this.cam_imp=new ImagePlus(&quot;&quot;,this.cam_ip);</span>
+<span class="nc" id="L113">		this.pixelSize=cal.pixelHeight;</span>
+<span class="nc" id="L114">		this.exp=cal.frameInterval;</span>
+<span class="nc" id="L115">		this.quant=quantumEff;</span>
+<span class="nc" id="L116">		this.initCalibration();</span>
+		
+		
+<span class="nc" id="L119">	}</span>
+	/*===============================================================================================*
+	 * Initialization routines
+	 *===============================================================================================*/
+
+	private void initCalibrationDialog(){
+<span class="nc" id="L125">		GenericDialog gd=new GenericDialog(&quot;Camera Parameters&quot;);</span>
+<span class="nc" id="L126">		gd.addNumericField(&quot;Pixel size in um  :&quot;, 6.5, 1);</span>
+<span class="nc" id="L127">		gd.addNumericField(&quot;Exposure time in ms  :&quot;,30,1);</span>
+<span class="nc" id="L128">		gd.showDialog();</span>
+		
+<span class="nc" id="L130">		this.cal.pixelHeight=gd.getNextNumber();</span>
+<span class="nc" id="L131">		this.cal.frameInterval=gd.getNextNumber();</span>
+		
+		
+<span class="nc" id="L134">	}</span>
+	private void initCalibration(){
+<span class="nc bnc" id="L136" title="All 2 branches missed.">		if (this.exp==0) this.exp=100;</span>
+<span class="nc" id="L137">		this.cal.frameInterval=this.exp;</span>
+<span class="nc bnc" id="L138" title="All 2 branches missed.">		if (this.pixelSize==0) this.pixelSize=6.45;</span>
+<span class="nc" id="L139">		this.cal.pixelHeight=this.pixelSize;</span>
+<span class="nc" id="L140">		this.cal.pixelWidth=this.pixelSize;</span>
+<span class="nc" id="L141">	}</span>
+	protected void reset(){
+<span class="nc" id="L143">		this.readNoise=false;</span>
+<span class="nc" id="L144">		this.PoissonNoise=false;</span>
+<span class="nc" id="L145">		this.DetectionNoise=false;</span>
+<span class="nc" id="L146">	}</span>
+	/*===============================================================================================
+	 * get() and set() Methods
+	 *================================================================================================*/
+	
+	public Calibration getCalibration(){
+<span class="nc" id="L152">		return this.cal;</span>
+	}
+	
+	public double getQuantumEff(){
+<span class="nc" id="L156">		return this.quant;</span>
+	}
+	
+	public int getWidth(){
+<span class="nc" id="L160">		return this.cam_imp.getWidth();</span>
+	}
+	
+	public int getHeight(){
+<span class="nc" id="L164">		return this.cam_imp.getHeight();</span>
+	}
+	
+	public ImagePlus getImagePlus(){
+		
+//		cam_imp.setProcessor(cam_ip);
+<span class="nc" id="L170">		return this.cam_imp;</span>
+	}
+	
+	public double getPixelSize(){
+<span class="nc" id="L174">		return this.pixelSize;</span>
+	}
+	
+	ImageProcessor getProcessor(){
+<span class="nc bnc" id="L178" title="All 2 branches missed.">		if (this.cam_ip==null) IJ.log(&quot;Image Processor is empty&quot;);</span>
+<span class="nc" id="L179">		return this.cam_ip;</span>
+	}
+	
+	public ImageStack getStack() {
+<span class="nc" id="L183">		return cam_stack;</span>
+	}
+	
+	public String getTitle(){
+<span class="nc bnc" id="L187" title="All 2 branches missed.">		if (title==null) title=&quot;&quot;;</span>
+<span class="nc bnc" id="L188" title="All 2 branches missed.">		if (this.PoissonNoise) title+=&quot;+Poisson Noise &quot;;</span>
+<span class="nc bnc" id="L189" title="All 2 branches missed.">		if (this.DetectionNoise) title+=&quot;+Detection Noise &quot;;</span>
+<span class="nc bnc" id="L190" title="All 2 branches missed.">		if (this.readNoise) title+=&quot;+Read Noise &quot;;</span>
+		
+<span class="nc" id="L192">		return title;</span>
+	}
+	private void setImagePlus(){
+<span class="nc" id="L195">		this.cam_imp.setProcessor(cam_ip);</span>
+<span class="nc" id="L196">		this.cam_imp.setTitle(getTitle());</span>
+<span class="nc" id="L197">	}</span>
+	
+	public void setImagePlus(ImageStack stack){
+<span class="nc" id="L200">		this.cam_imp.setStack(stack);</span>
+<span class="nc" id="L201">	}</span>
+	
+	public void setImagePlus(ImagePlus imp){
+<span class="nc" id="L204">		this.cam_imp=imp;</span>
+<span class="nc" id="L205">	}</span>
+	
+	public void setImageProcessor(ImageProcessor ip){
+<span class="nc" id="L208">		this.cam_ip=ip;</span>
+<span class="nc" id="L209">	}</span>
+	
+	public void setTitle(String title){
+<span class="nc" id="L212">		this.title=title;</span>
+<span class="nc" id="L213">		this.cam_imp.setTitle(title);</span>
+<span class="nc" id="L214">	}</span>
+	
+	
+	/*============================================================================================================================
+	 *
+	 * Image Processors for Noise calculation
+	 *
+	 ==============================================================================================================================*/
+	
+	public ImageProcessor PoissonNoise(){
+		
+<span class="nc" id="L225">		ImageProcessor ip=this.cam_ip.duplicate();</span>
+		
+<span class="nc bnc" id="L227" title="All 2 branches missed.">		if (!this.PoissonNoise){</span>
+<span class="nc" id="L228">			this.PoissonNoise=true;</span>
+<span class="nc" id="L229">			PoissonGenerator pg=new PoissonGenerator();</span>
+<span class="nc" id="L230">			final int width=ip.getWidth();</span>
+<span class="nc" id="L231">			final int height=ip.getHeight();</span>
+<span class="nc" id="L232">			final int bitDepth=ip.getBitDepth();</span>
+<span class="nc" id="L233">			ip.convertToFloat();</span>
+<span class="nc" id="L234">			double seed=0;</span>
+<span class="nc bnc" id="L235" title="All 2 branches missed.">			for (int i=0;i&lt;width;i++){</span>
+<span class="nc bnc" id="L236" title="All 2 branches missed.">				for (int j=0;j&lt;height;j++){</span>
+<span class="nc bnc" id="L237" title="All 4 branches missed.">					switch (bitDepth){</span>
+<span class="nc" id="L238">						case 8:	seed=ip.getPixel(i,j);</span>
+<span class="nc" id="L239">							break;</span>
+<span class="nc" id="L240">						case 16:seed=ip.getPixel(i,j);</span>
+<span class="nc" id="L241">							break;</span>
+<span class="nc" id="L242">						case 32:seed=Float.intBitsToFloat(ip.getPixel(i, j));</span>
+							break;
+					}
+				
+<span class="nc" id="L246">					seed=pg.next(seed);</span>
+<span class="nc" id="L247">					ip.setf(i, j, (float)seed);</span>
+				}
+			}
+<span class="nc" id="L250">		}</span>
+<span class="nc" id="L251">		else IJ.log(&quot;Poisson noise already added&quot;);</span>
+		
+<span class="nc" id="L253">		return ip;</span>
+		
+	}
+
+	public ImageProcessor Bimodal() {
+<span class="nc" id="L258">		ImageProcessor ip=this.cam_ip.duplicate();</span>
+<span class="nc bnc" id="L259" title="All 2 branches missed.">		if (!this.DetectionNoise){</span>
+<span class="nc" id="L260">			this.DetectionNoise=true;</span>
+<span class="nc" id="L261">			final int w=ip.getWidth();</span>
+<span class="nc" id="L262">			final int h=ip.getHeight();</span>
+			int phot;
+			double value;
+			
+			
+<span class="nc" id="L267">			BinomialGenerator bmg=new BinomialGenerator();</span>
+			
+<span class="nc bnc" id="L269" title="All 2 branches missed.">			for (int i=0; i&lt;w*h;i++){</span>
+<span class="nc" id="L270">				IJ.showProgress(i, w*h);</span>
+				
+<span class="nc bnc" id="L272" title="All 2 branches missed.">					if (ip.getBitDepth()&lt;32) phot=ip.get(i);</span>
+<span class="nc" id="L273">					else phot=(int)Float.intBitsToFloat(ip.get(i));</span>
+					
+					//bmg=new BinomialGenerator(phot,quantumEff);
+					
+<span class="nc" id="L277">					value=bmg.next(phot,quant);</span>
+					
+<span class="nc" id="L279">					ip.setf(i, (int)(value));</span>
+					
+					
+				}
+			
+<span class="nc" id="L284">		}</span>
+<span class="nc" id="L285">		else IJ.log(&quot;Detection noise already added&quot;);</span>
+		
+<span class="nc" id="L287">		return ip;</span>
+	}
+	
+	public ImageProcessor ReadNoise() {
+<span class="nc" id="L291">		ImageProcessor ip=this.cam_ip.duplicate();</span>
+<span class="nc bnc" id="L292" title="All 2 branches missed.">		if (!this.readNoise){</span>
+			
+<span class="nc" id="L294">			this.readNoise=true;</span>
+<span class="nc" id="L295">			final int w=ip.getWidth();</span>
+<span class="nc" id="L296">			final int h=ip.getHeight();</span>
+<span class="nc" id="L297">			int sig,i=0;</span>
+			double value;
+			
+<span class="nc" id="L300">			int timeNow = Math.abs((int)System.currentTimeMillis());</span>
+			//IJ.log(&quot;&quot;+timeNow);
+<span class="nc" id="L302">			Random rnd=new Random();</span>
+<span class="nc" id="L303">			int seed=(int) (timeNow+rnd.nextInt((int)timeNow));</span>
+<span class="nc" id="L304">			GaussianGenerator gg=new GaussianGenerator(this.read,this.read,seed);</span>
+			
+<span class="nc bnc" id="L306" title="All 2 branches missed.">			for (i=0; i&lt;w*h;i++){</span>
+				
+<span class="nc" id="L308">				IJ.showProgress(i, w*h);</span>
+					
+<span class="nc bnc" id="L310" title="All 2 branches missed.">					if (ip.getBitDepth()&lt;32) {</span>
+<span class="nc" id="L311">						sig=ip.get(i);</span>
+						
+<span class="nc" id="L313">					}</span>
+					else {
+<span class="nc" id="L315">						sig=(int)Float.intBitsToFloat(ip.get(i));</span>
+						
+					}
+<span class="nc" id="L318">					value=gg.next()+sig;</span>
+<span class="nc bnc" id="L319" title="All 2 branches missed.">					if (value&lt;0) value=0;</span>
+<span class="nc" id="L320">					ip.setf(i, (int)(value)+this.readoffset);</span>
+					
+				}
+		}
+
+<span class="nc" id="L325">		return ip;</span>
+	}
+	
+	
+	
+	public ImageProcessor EMGain(double gainfactor){
+<span class="nc" id="L331">		ImageProcessor ip=this.cam_ip.duplicate();</span>
+<span class="nc" id="L332">		ip=ip.convertToFloat();</span>
+<span class="nc bnc" id="L333" title="All 2 branches missed.">		if (!this.gainEM){</span>
+			
+<span class="nc" id="L335">			this.gainEM=true;</span>
+			
+<span class="nc" id="L337">			final int w=ip.getWidth();</span>
+<span class="nc" id="L338">			final int h=ip.getHeight();</span>
+<span class="nc" id="L339">			int sig,i=0;</span>
+			double value;
+			
+			
+<span class="nc" id="L343">			GammaGenerator gg=new GammaGenerator();</span>
+			
+<span class="nc bnc" id="L345" title="All 2 branches missed.">			for (i=0; i&lt;w*h;i++){</span>
+				
+<span class="nc" id="L347">				IJ.showProgress(i, w*h);</span>
+					
+<span class="nc bnc" id="L349" title="All 2 branches missed.">					if (ip.getBitDepth()&lt;32) {</span>
+<span class="nc" id="L350">						sig=ip.get(i);</span>
+						
+<span class="nc" id="L352">					}</span>
+					else {
+<span class="nc" id="L354">						sig=(int)Float.intBitsToFloat(ip.get(i));</span>
+						
+					}
+<span class="nc" id="L357">					value=gg.next()+sig*gainfactor;</span>
+<span class="nc bnc" id="L358" title="All 2 branches missed.">					if (value&lt;0) value=0;</span>
+<span class="nc" id="L359">					ip.setf(i, (float)value);</span>
+					
+				}
+		}
+<span class="nc" id="L363">		ip=ip.convertToShort(true);</span>
+<span class="nc" id="L364">		return ip;</span>
+	}
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

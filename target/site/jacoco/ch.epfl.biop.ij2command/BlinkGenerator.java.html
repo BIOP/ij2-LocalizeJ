@@ -1,0 +1,230 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>BlinkGenerator.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">LocalizeJ</a> &gt; <a href="index.source.html" class="el_package">ch.epfl.biop.ij2command</a> &gt; <span class="el_source">BlinkGenerator.java</span></div><h1>BlinkGenerator.java</h1><pre class="source lang-java linenums">package ch.epfl.biop.ij2command;
+ import ij.*;
+import ij.gui.*;
+import ij.measure.Calibration;
+import ij.process.*;
+import ij.plugin.*;
+
+import java.lang.*;
+import java.awt.*;
+import java.awt.image.*;
+import java.text.DecimalFormat;
+
+import ij.plugin.filter.PlugInFilter;
+import imagescience.random.BinomialGenerator;
+import imagescience.random.PoissonGenerator;
+
+import java.util.*;
+
+public class BlinkGenerator {
+	
+	
+	
+	ImageProcessor ip_time, ip_psf;
+	ImageStack timeStack;
+<span class="nc" id="L25">	int pixel_size_time=4;</span>
+<span class="nc" id="L26">	int lambda=488;</span>
+	int nFrames;
+<span class="nc" id="L28">	double na=1.4;</span>
+<span class="nc" id="L29">	static int scaleFactor=16;</span>
+	int width;
+	int height;
+<span class="nc" id="L32">	double darkNoise=400;</span>
+<span class="nc" id="L33">	double darkStdv=63.0;</span>
+<span class="nc" id="L34">	double quantumEff=0.7;</span>
+	
+<span class="nc" id="L36">	double photons=7000/(2.506*2.506);</span>
+	
+<span class="nc" id="L38">	public BlinkGenerator(ImagePlus imp){</span>
+<span class="nc" id="L39">		ImageProcessor test=PoissonNoise(imp.getProcessor());</span>
+<span class="nc" id="L40">		ImagePlus noise=new ImagePlus(&quot;&quot;,test);</span>
+<span class="nc" id="L41">		noise.show();</span>
+<span class="nc" id="L42">	}</span>
+	
+<span class="nc" id="L44">	public BlinkGenerator(ImageStack stack){</span>
+<span class="nc bnc" id="L45" title="All 2 branches missed.">		if (stack.getSize()&lt;2) return;</span>
+<span class="nc" id="L46">		nFrames=stack.getSize();</span>
+<span class="nc" id="L47">		timeStack=stack;</span>
+<span class="nc" id="L48">		width=stack.getWidth();</span>
+<span class="nc" id="L49">		height=stack.getHeight();</span>
+		
+<span class="nc" id="L51">		BesselWindow bw=new BesselWindow(stack.getWidth(),stack.getHeight(),pixel_size_time,lambda,na);</span>
+<span class="nc" id="L52">		ip_psf=bw.calc().getProcessor();</span>
+//		ImagePlus imp_psf=new ImagePlus(&quot;&quot;,ip_psf);
+//		imp_psf.show();
+<span class="nc" id="L55">	}</span>
+	
+	void calculate(){
+<span class="nc" id="L58">		final ImageStack resultStack = new ImageStack(timeStack.getWidth()/scaleFactor,timeStack.getHeight()/scaleFactor);  </span>
+<span class="nc" id="L59">		final Thread[] threads = newThreadArray();  </span>
+<span class="nc" id="L60">	    final ImageProcessor [] res_ip=new ImageProcessor[nFrames];</span>
+//	    final ImageProcessor calc=new ShortProcessor(timeStack.getWidth(),timeStack.getHeight());
+	    
+//	        for (int ithread = 0; ithread &lt; threads.length; ithread++) {  
+	  
+	            // Concurrently run in as many threads as CPUs  
+	  
+//	            threads[ithread] = new Thread() {  
+	                          
+//	                { setPriority(Thread.NORM_PRIORITY); }  
+	  
+//	                public void run() {
+<span class="nc" id="L72">	                	ImageProcessor calc=new ShortProcessor(timeStack.getWidth(),timeStack.getHeight());</span>
+	                	
+<span class="nc bnc" id="L74" title="All 2 branches missed.">	                	for (int i=0;i&lt;nFrames;i++){</span>
+<span class="nc" id="L75">	                		IJ.showStatus(&quot;Complex conjugate multiply&quot;+i+&quot;/&quot;+nFrames);</span>
+<span class="nc" id="L76">	                		ip_time=timeStack.getProcessor(i+1);</span>
+<span class="nc" id="L77">	                		calc=new ImagePlus(&quot;Test&quot;, convolve()).getProcessor();</span>
+<span class="nc" id="L78">	                		calc.multiply(photons);</span>
+<span class="nc" id="L79">	                		calc.add(0.001);</span>
+<span class="nc" id="L80">	                		ImagePlus intermediate=new ImagePlus(&quot;&quot;,calc);</span>
+<span class="nc" id="L81">	                		calc=PoissonNoise(calc);</span>
+	                		
+<span class="nc" id="L83">	                		calc.setInterpolate(false);</span>
+<span class="nc" id="L84">	                		calc.setInterpolationMethod(ImageProcessor.NONE);</span>
+<span class="nc" id="L85">	                		calc=calc.resize(width/scaleFactor, height/scaleFactor);</span>
+<span class="nc" id="L86">	                		calc=Bimodal(calc);</span>
+<span class="nc" id="L87">	                		intermediate.setProcessor(calc);</span>
+	                		
+<span class="nc" id="L89">	                		intermediate.show();</span>
+	                		
+<span class="nc" id="L91">	                		ImagePlus impNoise = IJ.createImage(&quot;Untitled&quot;, &quot;32-bit Black&quot;, width/scaleFactor, height/scaleFactor, 1);</span>
+<span class="nc" id="L92">	                		IJ.run(impNoise, &quot;Add...&quot;, &quot;value=&quot;+darkNoise+&quot; stack&quot;);</span>
+<span class="nc" id="L93">	                		IJ.run(impNoise, &quot;Add Specified Noise...&quot;, &quot;stack standard=&quot;+darkStdv);</span>
+	                		
+<span class="nc" id="L95">	                		ImageCalculator ic = new ImageCalculator();</span>
+<span class="nc" id="L96">	                		ic.run(&quot;Add&quot;, intermediate, impNoise);</span>
+	                		
+<span class="nc" id="L98">	                		calc=intermediate.getProcessor();</span>
+<span class="nc" id="L99">	                		calc.setInterpolate(true);</span>
+<span class="nc" id="L100">	                		calc.setInterpolationMethod(ImageProcessor.NONE);</span>
+<span class="nc" id="L101">	                		res_ip[i]=calc.resize(width/scaleFactor, height/scaleFactor);</span>
+	                		
+	                		
+<span class="nc" id="L104">	                		res_ip[i].setMinAndMax(0, 65532);</span>
+<span class="nc" id="L105">	                		res_ip[i]=res_ip[i].convertToShort(true);</span>
+	                		
+<span class="nc" id="L107">	                		impNoise.close();</span>
+<span class="nc" id="L108">	                		intermediate.close();</span>
+	                	}
+//	                }
+//	            };
+//	        }
+//	        startAndJoin(threads); 
+	        
+<span class="nc bnc" id="L115" title="All 2 branches missed.">	        for (int i=0;i&lt;nFrames;i++){</span>
+<span class="nc" id="L116">	        	resultStack.addSlice(res_ip[i]);</span>
+	        }
+<span class="nc" id="L118">	        ImagePlus resultImg=new ImagePlus(&quot;Conv&quot;,resultStack);</span>
+<span class="nc" id="L119">			resultImg.show();</span>
+<span class="nc" id="L120">	}</span>
+	/**
+	
+	
+	*/
+	ImageProcessor PoissonNoise(ImageProcessor ip){
+<span class="nc" id="L126">		PoissonGenerator pg=new PoissonGenerator();</span>
+<span class="nc" id="L127">		final int width=ip.getWidth();</span>
+<span class="nc" id="L128">		final int height=ip.getHeight();</span>
+		double seed;
+<span class="nc bnc" id="L130" title="All 2 branches missed.">		for (int i=0;i&lt;width;i++){</span>
+<span class="nc bnc" id="L131" title="All 2 branches missed.">			for (int j=0;j&lt;height;j++){</span>
+<span class="nc" id="L132">				seed=Float.intBitsToFloat(ip.getPixel(i, j));</span>
+<span class="nc" id="L133">				seed=pg.next(seed);</span>
+<span class="nc" id="L134">				ip.putPixelValue(i, j, seed);</span>
+			}
+		}
+<span class="nc" id="L137">		return ip;</span>
+		
+	}
+	public ImageProcessor Bimodal(ImageProcessor ip){
+		
+		
+		
+<span class="nc" id="L144">		final int w=ip.getWidth();</span>
+<span class="nc" id="L145">		final int h=ip.getHeight();</span>
+		int phot;
+<span class="nc" id="L147">		final ImageProcessor out=new ShortProcessor(w,h);</span>
+<span class="nc" id="L148">		final BinomialGenerator bmg=new BinomialGenerator(20,quantumEff);</span>
+		
+<span class="nc bnc" id="L150" title="All 2 branches missed.">		for (int i=0; i&lt;w;i++){</span>
+<span class="nc" id="L151">			IJ.showProgress(i, w);</span>
+<span class="nc bnc" id="L152" title="All 2 branches missed.">			for (int j=0;j&lt;h;j++){</span>
+<span class="nc" id="L153">				phot=ip.get(i,j);</span>
+				
+<span class="nc" id="L155">				out.set(i+w*j, (int)((bmg.next()*phot)/20));</span>
+				
+				
+			}
+		}
+		
+		
+<span class="nc" id="L162">		return out;</span>
+	}
+	FHT convolve(){
+	
+<span class="nc" id="L166">		FHT h1, h2=null;</span>
+	
+<span class="nc" id="L168">		h1 = new FHT(ip_time);</span>
+<span class="nc" id="L169">		h2 = new FHT(ip_psf);</span>
+			
+<span class="nc bnc" id="L171" title="All 2 branches missed.">		if (!h1.powerOf2Size()) {</span>
+<span class="nc" id="L172">			IJ.error(&quot;FFT Math&quot;, &quot;Images must be a power of 2 size (256x256, 512x512, etc.)&quot;);</span>
+<span class="nc" id="L173">			return null;</span>
+		}
+/*		if (stack.getWidth()!=filter.getWidth()) {
+			IJ.error(&quot;FFT Math&quot;, &quot;Images must be the same size&quot;);
+			return null;
+		}
+*/
+		
+<span class="nc" id="L181">		h1.transform();</span>
+<span class="nc" id="L182">		h2.transform();</span>
+		
+<span class="nc" id="L184">		FHT result=null;</span>
+		
+<span class="nc" id="L186">		result = h1.multiply(h2); </span>
+<span class="nc" id="L187">		result.inverseTransform();</span>
+<span class="nc" id="L188">		result.swapQuadrants();</span>
+<span class="nc" id="L189">		result.resetMinAndMax();</span>
+<span class="nc" id="L190">		return result;</span>
+	}
+	
+	
+	 /** Create a Thread[] array as large as the number of processors available. 
+	    * From Stephan Preibisch's Multithreading.java class. See: 
+	    * http://repo.or.cz/w/trakem2.git?a=blob;f=mpi/fruitfly/general/MultiThreading.java;hb=HEAD 
+	    */  
+	    private Thread[] newThreadArray() {  
+<span class="nc" id="L199">	        int n_cpus = Runtime.getRuntime().availableProcessors();  </span>
+<span class="nc" id="L200">	        return new Thread[n_cpus];  </span>
+	    }  
+	  
+	    /** Start all given threads and wait on each of them until all are done. 
+	    * From Stephan Preibisch's Multithreading.java class. See: 
+	    * http://repo.or.cz/w/trakem2.git?a=blob;f=mpi/fruitfly/general/MultiThreading.java;hb=HEAD 
+	    */  
+	    public static void startAndJoin(Thread[] threads)  
+	    {  
+<span class="nc bnc" id="L209" title="All 2 branches missed.">	        for (int ithread = 0; ithread &lt; threads.length; ++ithread)  </span>
+	        {  
+<span class="nc" id="L211">	            threads[ithread].setPriority(Thread.NORM_PRIORITY);  </span>
+<span class="nc" id="L212">	            threads[ithread].start();  </span>
+	        }  
+	  
+	        try  
+	        {     
+<span class="nc bnc" id="L217" title="All 2 branches missed.">	            for (int ithread = 0; ithread &lt; threads.length; ++ithread)  </span>
+<span class="nc" id="L218">	                threads[ithread].join();  </span>
+<span class="nc" id="L219">	        } catch (InterruptedException ie)  </span>
+	        {  
+<span class="nc" id="L221">	            throw new RuntimeException(ie);  </span>
+	        }  
+<span class="nc" id="L223">	    }</span>
+}
+		
+		
+    	
+  
+       
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

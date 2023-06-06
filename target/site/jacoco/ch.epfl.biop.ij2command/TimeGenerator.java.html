@@ -1,0 +1,640 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>TimeGenerator.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">LocalizeJ</a> &gt; <a href="index.source.html" class="el_package">ch.epfl.biop.ij2command</a> &gt; <span class="el_source">TimeGenerator.java</span></div><h1>TimeGenerator.java</h1><pre class="source lang-java linenums">package ch.epfl.biop.ij2command;
+import ij.*;
+import ij.gui.Roi;
+import ij.measure.Calibration;
+import ij.measure.ResultsTable;
+import ij.plugin.Thresholder;
+import ij.process.*;
+
+import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
+
+public class TimeGenerator {
+<span class="nc" id="L13">	final static String gridPath=Prefs.get(&quot;TimeGenerator.gridPath&quot;, &quot;path&quot;);</span>
+
+<span class="nc" id="L15">	private int numParticles=200;</span>
+<span class="nc" id="L16">	private int numFrames=20; </span>
+<span class="nc" id="L17">	private double switchOn=0.20;</span>
+<span class="nc" id="L18">	private double switchOff=0;</span>
+<span class="nc" id="L19">	private double bleachRate=0.2;</span>
+	
+<span class="nc" id="L21">	private int framewidth=256;</span>
+<span class="nc" id="L22">	private int frameheight=256;</span>
+<span class="nc" id="L23">	private int bright=1;</span>
+	private Calibration cal;
+<span class="nc" id="L25">	private String stacktitle=&quot;Time Stack&quot;;</span>
+	private ImagePlus nimp;
+	private int XPos[];
+	private int YPos[];
+	private int timeTrace[][];
+<span class="nc" id="L30">	public Vector &lt;Integer &gt;store=new Vector &lt;Integer&gt;(3);</span>
+	
+<span class="nc" id="L32">	private boolean isCondensed=false;</span>
+<span class="nc" id="L33">	boolean Diffusion2D=true;</span>
+	
+/*=======================================================================================
+ * 		Constructors
+ *=========================================================================================*/
+<span class="nc" id="L38">	TimeGenerator(){</span>
+<span class="nc" id="L39">		this.init();</span>
+<span class="nc" id="L40">	}</span>
+<span class="nc" id="L41">	TimeGenerator(int w, int h, int numPart){</span>
+<span class="nc" id="L42">		this.setFrameSize(w,h);</span>
+<span class="nc" id="L43">		this.setParticleNumber(numPart);</span>
+<span class="nc" id="L44">		this.init();</span>
+<span class="nc" id="L45">	}</span>
+	
+<span class="nc" id="L47">	TimeGenerator(int w, int h){</span>
+<span class="nc" id="L48">		this.setFrameSize(w, h);</span>
+<span class="nc" id="L49">		this.init();</span>
+<span class="nc" id="L50">	}</span>
+	
+<span class="nc" id="L52">	TimeGenerator(ImagePlus imp){</span>
+<span class="nc" id="L53">		this.init(imp);</span>
+<span class="nc" id="L54">	}</span>
+/*=======================================================================================
+ * 		set() and get() 
+ *=========================================================================================*/	
+	private void setFrameSize(int width, int height){
+<span class="nc" id="L59">		this.framewidth=width;</span>
+<span class="nc" id="L60">		this.frameheight=height;</span>
+<span class="nc" id="L61">	}</span>
+	void setOnRate(double on){
+<span class="nc bnc" id="L63" title="All 2 branches missed.">		if (on&gt;1.0) on=1.0;</span>
+<span class="nc" id="L64">		this.switchOn=on;</span>
+<span class="nc" id="L65">	}</span>
+	void setOffRate(double off){
+<span class="nc bnc" id="L67" title="All 2 branches missed.">		if (off&gt;1.0) off=1.0;</span>
+<span class="nc" id="L68">		this.switchOff=off;</span>
+<span class="nc" id="L69">	}</span>
+	void setBleachRate(double bleach){
+<span class="nc" id="L71">		this.bleachRate=bleach;</span>
+<span class="nc" id="L72">	}</span>
+	void setFrameNumber(int n){
+<span class="nc" id="L74">		this.numFrames=n;</span>
+<span class="nc" id="L75">		this.init();</span>
+<span class="nc" id="L76">	}</span>
+	
+	void setParticleNumber(int n){
+<span class="nc" id="L79">		this.numParticles=n;</span>
+<span class="nc" id="L80">		this.init();</span>
+<span class="nc" id="L81">	}</span>
+	
+	boolean isCondensed(){
+<span class="nc" id="L84">		return this.isCondensed;</span>
+	}
+	ImagePlus getProjectedTimeTrace(){
+<span class="nc" id="L87">		return this.projectTimeTrace();</span>
+	}
+	int getWidth(){
+<span class="nc" id="L90">		return framewidth;</span>
+	}
+	int getHeight(){
+<span class="nc" id="L93">		return frameheight;</span>
+	}
+	int getStackSize(){
+<span class="nc" id="L96">		return store.get(0);</span>
+	}
+	ShortProcessor getSlice(int slice){
+		
+<span class="nc" id="L100">		int stackSize=store.get(0);</span>
+<span class="nc" id="L101">		int width=store.get(1);</span>
+<span class="nc" id="L102">		int height=store.get(2);</span>
+<span class="nc" id="L103">		int startSlice=3;</span>
+<span class="nc" id="L104">		ShortProcessor n_ip=new ShortProcessor(width,height);</span>
+<span class="nc bnc" id="L105" title="All 2 branches missed.">		for (int i=0;i&lt;stackSize;i++){</span>
+			
+<span class="nc" id="L107">			int numPart=store.get(startSlice+1);</span>
+<span class="nc bnc" id="L108" title="All 2 branches missed.">			if (i==slice) {</span>
+<span class="nc bnc" id="L109" title="All 2 branches missed.">				for (int j=0;j&lt;numPart;j++){</span>
+<span class="nc" id="L110">					int pos=store.get(startSlice+2+j);</span>
+<span class="nc" id="L111">					n_ip.set(pos, 1);</span>
+				}
+<span class="nc" id="L113">				i=stackSize;</span>
+			}
+<span class="nc" id="L115">			startSlice+=numPart+2;</span>
+		}
+		
+<span class="nc" id="L118">		return n_ip;</span>
+	}
+/*=======================================================================================
+ * 		Initialization
+ *=========================================================================================*/	
+	void init(int number){
+		
+<span class="nc" id="L125">		XPos=new int[number];</span>
+<span class="nc" id="L126">		YPos=new int[number];</span>
+<span class="nc" id="L127">		timeTrace=new int[2][number];</span>
+<span class="nc" id="L128">	}</span>
+	
+	void init(){
+		
+<span class="nc" id="L132">		XPos=new int[this.numParticles];</span>
+<span class="nc" id="L133">		YPos=new int[this.numParticles];</span>
+<span class="nc" id="L134">		timeTrace=new int[2][this.numParticles];</span>
+<span class="nc" id="L135">	}</span>
+	void init(ImagePlus imp){
+<span class="nc" id="L137">		FloatProcessor ip=(FloatProcessor) imp.getProcessor();</span>
+<span class="nc" id="L138">		this.setFrameSize((int)ip.getf(1),(int)ip.getf(2));</span>
+<span class="nc" id="L139">	}</span>
+	
+/*=======================================================================================
+ * 		generate Points 
+ *=========================================================================================*/	
+	public void generatePoints(int edge){
+<span class="nc" id="L145">		Random generator = new Random ();</span>
+<span class="nc bnc" id="L146" title="All 2 branches missed.">		for (int i=0;i&lt;(numParticles);i++){</span>
+<span class="nc" id="L147">			XPos[i]=(edge)+generator.nextInt(framewidth-2*edge);</span>
+<span class="nc" id="L148">			YPos[i]=(edge)+generator.nextInt(frameheight-2*edge);</span>
+<span class="nc" id="L149">			timeTrace[0][i]=0;</span>
+		}
+<span class="nc" id="L151">	}</span>
+	public void generateGridPoints(){
+		
+		
+<span class="nc" id="L155">		int num=(int)Math.sqrt(numParticles);</span>
+<span class="nc" id="L156">		int distX=(int)(0.75*framewidth/(num-1));</span>
+<span class="nc" id="L157">		int distY=(int)(0.75*frameheight/(num-1));</span>
+		
+<span class="nc" id="L159">		this.setParticleNumber(num*num);</span>
+		
+<span class="nc" id="L161">		int count=0;</span>
+<span class="nc bnc" id="L162" title="All 2 branches missed.">		for (int j=0;j&lt;num;j++){</span>
+<span class="nc bnc" id="L163" title="All 2 branches missed.">			for (int i=0;i&lt;num;i++){</span>
+<span class="nc" id="L164">				XPos[count]=(int)(0.125*framewidth)+i*distX;</span>
+<span class="nc" id="L165">				YPos[count]=(int)(0.125*frameheight)+j*distY;</span>
+<span class="nc" id="L166">				count++;</span>
+			
+			}
+		}
+		
+<span class="nc" id="L171">	}</span>
+	public void generateMask(String path){
+		
+//		String open=checkPath(path);
+<span class="nc" id="L175">		ImagePlus imp=IJ.openImage(path);</span>
+<span class="nc bnc" id="L176" title="All 2 branches missed.">		if (imp==null) {</span>
+<span class="nc" id="L177">			IJ.log(&quot;Please select an image (mask)&quot;);</span>
+<span class="nc" id="L178">			imp=IJ.openImage();</span>
+//			imp.show();
+<span class="nc" id="L180">			Prefs.set(&quot;TimeGenerator.gridPath&quot;, imp.getTitle());</span>
+		}
+		
+<span class="nc" id="L183">		this.framewidth=imp.getWidth();</span>
+<span class="nc" id="L184">		this.frameheight=imp.getHeight();</span>
+<span class="nc" id="L185">		ImageProcessor ipTest=imp.getProcessor();</span>
+<span class="nc" id="L186">		Random generator = new Random ();</span>
+		
+<span class="nc" id="L188">		long start=System.currentTimeMillis();</span>
+<span class="nc bnc" id="L189" title="All 2 branches missed.">		for (int i=0;i&lt;numParticles;i++){</span>
+			do {
+<span class="nc" id="L191">				XPos[i]=generator.nextInt(framewidth);</span>
+<span class="nc" id="L192">				YPos[i]=generator.nextInt(frameheight);</span>
+<span class="nc" id="L193">				timeTrace[0][i]=0;</span>
+				
+<span class="nc bnc" id="L195" title="All 2 branches missed.">			} while (ipTest.getPixel(XPos[i], YPos[i])==0);</span>
+		}
+<span class="nc" id="L197">		long end=System.currentTimeMillis();    </span>
+<span class="nc" id="L198">		IJ.log(&quot;Processing time point generation in sec: &quot;+(end-start)/1000);</span>
+<span class="nc" id="L199">	}</span>
+	public void generateFromMask(ImagePlus imp){
+		
+<span class="nc" id="L202">		this.framewidth=imp.getWidth();</span>
+<span class="nc" id="L203">		this.frameheight=imp.getHeight();</span>
+<span class="nc" id="L204">		ImageProcessor ipTest=imp.getProcessor();</span>
+<span class="nc" id="L205">		Random generator = new Random ();</span>
+		
+<span class="nc bnc" id="L207" title="All 2 branches missed.">		for (int i=0;i&lt;numParticles;i++){</span>
+			do {
+<span class="nc" id="L209">				XPos[i]=generator.nextInt(framewidth);</span>
+<span class="nc" id="L210">				YPos[i]=generator.nextInt(frameheight);</span>
+<span class="nc" id="L211">				timeTrace[0][i]=0;</span>
+				
+<span class="nc bnc" id="L213" title="All 2 branches missed.">			} while (ipTest.getPixel(XPos[i], YPos[i])==0);</span>
+		}
+<span class="nc" id="L215">	}</span>
+/*=======================================================================================
+ * 		calculate TimeTrace
+ *=========================================================================================*/
+	public void calcTimeTrace() 
+	{
+		
+		
+<span class="nc" id="L223">		Random generator = new Random ();	</span>
+        
+<span class="nc bnc" id="L225" title="All 2 branches missed.">        for (int i=1; i&lt;numFrames;i++){</span>
+<span class="nc" id="L226">			IJ.showProgress(i, numFrames);</span>
+<span class="nc bnc" id="L227" title="All 2 branches missed.">			for (int j=0;j&lt;numParticles;j++){</span>
+<span class="nc" id="L228">				double changeState=generator.nextDouble();</span>
+<span class="nc bnc" id="L229" title="All 2 branches missed.">				if (timeTrace[i-1][j]==1){</span>
+<span class="nc bnc" id="L230" title="All 2 branches missed.">					if (changeState&lt;switchOff) timeTrace[i][j]=0;</span>
+<span class="nc" id="L231">					else timeTrace[i][j]=1;		</span>
+				}
+<span class="nc bnc" id="L233" title="All 2 branches missed.">				if (timeTrace[i-1][j]==0){</span>
+<span class="nc bnc" id="L234" title="All 2 branches missed.">					if (changeState&lt;switchOn) timeTrace[i][j]=1;</span>
+<span class="nc" id="L235">					else timeTrace[i][j]=0;		</span>
+				}
+			}
+			
+        }	
+<span class="nc" id="L240">	}</span>
+	public void calcTimeTrace(int oversample) 
+	{
+<span class="nc" id="L243">		Random generator = new Random ();	</span>
+<span class="nc" id="L244">        double expon=Math.log10(switchOff)/oversample;</span>
+<span class="nc" id="L245">		double over_off=Math.pow(10, expon);</span>
+<span class="nc" id="L246">		expon=Math.log10(switchOn)/oversample;</span>
+<span class="nc" id="L247">		double over_on=Math.pow(10, expon);</span>
+		
+<span class="nc bnc" id="L249" title="All 2 branches missed.">        for (int i=1; i&lt;numFrames;i++){</span>
+<span class="nc" id="L250">			IJ.showProgress(i, numFrames);</span>
+<span class="nc bnc" id="L251" title="All 2 branches missed.">			for (int j=0;j&lt;numParticles;j++){</span>
+<span class="nc" id="L252">				int state_old=timeTrace[i-1][j];</span>
+<span class="nc" id="L253">				int state_new=0;</span>
+				
+<span class="nc bnc" id="L255" title="All 2 branches missed.">				for (int k=0;k&lt;oversample;k++){</span>
+					
+<span class="nc" id="L257">					double changeState=generator.nextDouble();</span>
+<span class="nc bnc" id="L258" title="All 2 branches missed.">					if (state_old==1){</span>
+<span class="nc bnc" id="L259" title="All 2 branches missed.">						if (changeState&lt;over_off) state_new=0;</span>
+<span class="nc" id="L260">						else state_new=1;		</span>
+					}
+<span class="nc bnc" id="L262" title="All 2 branches missed.">					if (state_old==0){</span>
+<span class="nc bnc" id="L263" title="All 2 branches missed.">						if (changeState&lt;over_on) state_new=1;</span>
+<span class="nc" id="L264">						else state_new=0;		</span>
+					}
+<span class="nc" id="L266">					state_old=state_new;</span>
+				}
+			}
+			
+        }	
+<span class="nc" id="L271">	}</span>
+	
+	
+	public void heavyTimeTrace(){
+		
+<span class="nc" id="L276">		this.isCondensed=true;</span>
+<span class="nc" id="L277">		Random generator = new Random ();	</span>
+		
+<span class="nc" id="L279">		store.addElement(numFrames);</span>
+<span class="nc" id="L280">		store.addElement(framewidth);</span>
+<span class="nc" id="L281">		store.addElement(frameheight);</span>
+		
+<span class="nc" id="L283">		int pos=0;</span>
+<span class="nc" id="L284">		long start=System.currentTimeMillis();		</span>
+<span class="nc bnc" id="L285" title="All 2 branches missed.">        for (int i=0; i&lt;numFrames;i++){</span>
+<span class="nc" id="L286">			IJ.showProgress(i, numFrames);</span>
+<span class="nc" id="L287">			store.addElement(i);</span>
+<span class="nc" id="L288">			int count=store.size();</span>
+<span class="nc" id="L289">			store.addElement(0);</span>
+//			int numPos=store.size();
+//			store.addElement(0);
+<span class="nc" id="L292">			int numCount=0;</span>
+
+<span class="nc bnc" id="L294" title="All 2 branches missed.">			for (int j=0;j&lt;numParticles;j++){</span>
+			
+<span class="nc" id="L296">				double changeState=generator.nextDouble();</span>
+<span class="nc" id="L297">				double bleach=generator.nextDouble();</span>
+				
+<span class="nc bnc" id="L299" title="All 2 branches missed.">				if (timeTrace[0][j]==1){</span>
+<span class="nc bnc" id="L300" title="All 2 branches missed.">					if (bleach&lt;bleachRate) timeTrace[1][j]=-1;</span>
+					else {
+				
+<span class="nc bnc" id="L303" title="All 2 branches missed.">						if (changeState&lt;switchOff) timeTrace[1][j]=0;</span>
+<span class="nc" id="L304">						else timeTrace[1][j]=1;		</span>
+					}
+				}
+<span class="nc bnc" id="L307" title="All 2 branches missed.">				if (timeTrace[0][j]==0){</span>
+<span class="nc bnc" id="L308" title="All 2 branches missed.">					if (changeState&lt;switchOn) timeTrace[1][j]=1;</span>
+<span class="nc" id="L309">					else timeTrace[1][j]=0;		</span>
+				}
+				
+<span class="nc" id="L312">				pos=YPos[j]*framewidth+XPos[j];</span>
+<span class="nc bnc" id="L313" title="All 2 branches missed.">				if (timeTrace[1][j]&gt;0){</span>
+<span class="nc" id="L314">					numCount++;</span>
+
+<span class="nc" id="L316">					store.setElementAt((Integer) store.get(count)+1, count);</span>
+//					store.setElementAt(numCount, numPos);
+<span class="nc" id="L318">					store.addElement(pos);</span>
+					
+				}	   	
+<span class="nc" id="L321">				timeTrace[0][j]=timeTrace[1][j];</span>
+				   
+			}
+		}
+<span class="nc" id="L325">        long end=System.currentTimeMillis();    </span>
+<span class="nc" id="L326">		IJ.log(&quot;Processing time time-lapse in sec: &quot;+(end-start)/1000);</span>
+        
+		
+<span class="nc" id="L329">	}</span>
+public void heavyTimeTrace(final int oversample){
+		
+<span class="nc" id="L332">		this.isCondensed=true;</span>
+		/*double expon=Math.log10(switchOff)/oversample;
+		double over_off=Math.pow(10, expon);
+		expon=Math.log10(switchOn)/oversample;
+		double over_on=Math.pow(10, expon);
+		expon=Math.log10(bleachRate)/oversample;
+		double over_bleach=Math.pow(10, expon);
+*/		
+		 
+		 
+<span class="nc" id="L342">		final double over_off=switchOff/oversample;</span>
+<span class="nc" id="L343">		final double over_on=switchOn/oversample;</span>
+<span class="nc" id="L344">		final double over_bleach=bleachRate/oversample;</span>
+		
+<span class="nc" id="L346">		store.addElement(numFrames);</span>
+<span class="nc" id="L347">		store.addElement(framewidth);</span>
+<span class="nc" id="L348">		store.addElement(frameheight);</span>
+		
+		
+<span class="nc" id="L351">		long start=System.currentTimeMillis();		</span>
+		
+<span class="nc" id="L353">       	final AtomicInteger numCount=new AtomicInteger(0);</span>
+		
+<span class="nc bnc" id="L355" title="All 2 branches missed.">		for (int i=1; i&lt;numFrames;i++){</span>
+<span class="nc" id="L356">			IJ.showProgress(i, numFrames);</span>
+<span class="nc" id="L357">			store.addElement(i);</span>
+<span class="nc" id="L358">			final int count=store.size();</span>
+<span class="nc" id="L359">			store.addElement(0);</span>
+<span class="nc" id="L360">			final int numPos=store.size();</span>
+<span class="nc" id="L361">			store.addElement(0);</span>
+//			final Thread[] threads = newThreadArray();  
+
+		    
+//			for (int ithread = 0; ithread &lt; threads.length; ithread++) {  
+
+		        // Concurrently run in as many threads as CPUs  
+
+//		        threads[ithread] = new Thread() {  
+		                      
+//		            { setPriority(Thread.NORM_PRIORITY); }  
+
+//		            public void run() {
+
+<span class="nc" id="L375">		            	Random generator = new Random ();</span>
+<span class="nc bnc" id="L376" title="All 2 branches missed.">			           	for (int j=0;j&lt;numParticles;j++){</span>
+			           		
+<span class="nc bnc" id="L378" title="All 2 branches missed.">			           		for (int k=0;k&lt;oversample;k++){</span>
+			
+<span class="nc" id="L380">			           			double changeState=generator.nextDouble();</span>
+<span class="nc" id="L381">								double bleach=generator.nextDouble();</span>
+<span class="nc bnc" id="L382" title="All 2 branches missed.">								if (timeTrace[0][j]==1){</span>
+<span class="nc bnc" id="L383" title="All 2 branches missed.">									if (bleach&lt;over_bleach) timeTrace[1][j]=-1;</span>
+									else {
+												
+<span class="nc bnc" id="L386" title="All 2 branches missed.">										if (changeState&lt;over_off) timeTrace[1][j]=0;</span>
+<span class="nc" id="L387">										else timeTrace[1][j]=1;		</span>
+									}
+								}
+<span class="nc bnc" id="L390" title="All 2 branches missed.">								if (timeTrace[0][j]==0){</span>
+<span class="nc bnc" id="L391" title="All 2 branches missed.">									if (changeState&lt;over_on) timeTrace[1][j]=1;</span>
+<span class="nc" id="L392">									else timeTrace[1][j]=0;		</span>
+								}
+<span class="nc" id="L394">								timeTrace[0][j]=timeTrace[1][j];</span>
+							}
+<span class="nc" id="L396">							int pos=YPos[j]*framewidth+XPos[j];</span>
+							
+<span class="nc bnc" id="L398" title="All 2 branches missed.">							if (timeTrace[1][j]&gt;0){</span>
+<span class="nc" id="L399">								numCount.incrementAndGet();</span>
+							
+<span class="nc" id="L401">								store.setElementAt((Integer) store.get(count)+1, count);</span>
+<span class="nc" id="L402">								store.setElementAt(numCount.get(), numPos);</span>
+<span class="nc" id="L403">								store.addElement(pos);</span>
+												
+							}	   	
+<span class="nc" id="L406">							timeTrace[0][j]=timeTrace[1][j];</span>
+											   
+						}
+			
+//					}
+//		        };  
+//	    }
+	
+
+//	    startAndJoin(threads);
+		}
+<span class="nc" id="L417">		long end=System.currentTimeMillis();    </span>
+<span class="nc" id="L418">		IJ.log(&quot;duration: &quot;+(end-start));</span>
+<span class="nc" id="L419">	}</span>
+	public void BlinkStatistics(ImagePlus imp,int size,double scale){
+		
+<span class="nc" id="L422">		IJ.run(&quot;Set Measurements...&quot;, &quot;area mean standard centroid area_fraction redirect=None decimal=3&quot;);</span>
+<span class="nc" id="L423">		Roi [] roi= new Roi[numParticles];</span>
+<span class="nc bnc" id="L424" title="All 2 branches missed.">		for (int i=0; i&lt;numParticles;i++){</span>
+<span class="nc" id="L425">			roi[i]=new Roi((XPos[i]/scale)-size/2,(YPos[i]/scale)-size/2,size,size);</span>
+			
+			
+			
+		}
+<span class="nc" id="L430">		FloatProcessor res=new FloatProcessor(numParticles,numFrames);</span>
+<span class="nc bnc" id="L431" title="All 2 branches missed.">		for (int s=1;s&lt;=numFrames;s++){</span>
+<span class="nc" id="L432">			imp.setSlice(s);</span>
+			
+<span class="nc" id="L434">			ImageProcessor ip=imp.getProcessor();</span>
+			
+<span class="nc bnc" id="L436" title="All 2 branches missed.">			for (int i=0; i&lt;numParticles;i++){</span>
+<span class="nc" id="L437">				roi[i].setPosition(i);</span>
+<span class="nc" id="L438">				imp.setRoi(roi[i]);</span>
+<span class="nc" id="L439">				ip.setRoi(roi[i]);</span>
+<span class="nc" id="L440">				res.putPixelValue(i, s, ip.getStatistics().mean);</span>
+				
+			}
+		}
+<span class="nc" id="L444">		ImagePlus calc=new ImagePlus(&quot;BlinkStatistic&quot;,res);</span>
+<span class="nc" id="L445">		IJ.setThreshold(calc, 50, 1000);</span>
+<span class="nc" id="L446">		IJ.run(calc, &quot;Measure&quot;, &quot;&quot;);</span>
+//		imp.show();
+//		calc.show();
+		
+		
+		
+<span class="nc" id="L452">	}</span>
+	public ImagePlus reconstructTimeTrace(ImagePlus imp){
+<span class="nc" id="L454">		ImageProcessor ip=imp.getProcessor();</span>
+<span class="nc" id="L455">		int stackSize=(int)ip.getf(0);</span>
+<span class="nc" id="L456">		int width=(int)ip.getf(1);</span>
+<span class="nc" id="L457">		int height=(int)ip.getf(2);</span>
+<span class="nc" id="L458">		int start=3;</span>
+<span class="nc" id="L459">		ImageStack stack=new ImageStack(width, height);</span>
+<span class="nc bnc" id="L460" title="All 2 branches missed.">		for (int i=0;i&lt;stackSize;i++){</span>
+<span class="nc" id="L461">			ImageProcessor stack_ip=new ShortProcessor(width, height);</span>
+<span class="nc" id="L462">			int numPart=(int)ip.getf(start+1);</span>
+<span class="nc bnc" id="L463" title="All 2 branches missed.">			for (int j=0;j&lt;numPart;j++){</span>
+<span class="nc" id="L464">				int pos=(int)ip.getf(start+2+j);</span>
+<span class="nc" id="L465">				stack_ip.set(pos, 1);</span>
+			}
+<span class="nc" id="L467">			stack.addSlice(stack_ip);</span>
+<span class="nc" id="L468">			start+=numPart+2;</span>
+		}
+		
+<span class="nc" id="L471">		return new ImagePlus (&quot;TimeTrace&quot;,stack);</span>
+	}
+	public ResultsTable groundTruthTable(FloatProcessor ip){
+<span class="nc" id="L474">		ResultsTable rt = null;</span>
+<span class="nc" id="L475">		int stackSize=(int)ip.getf(0);</span>
+<span class="nc" id="L476">		int width=(int)ip.getf(1);</span>
+<span class="nc" id="L477">		int height=(int)ip.getf(2);</span>
+<span class="nc" id="L478">		int start=3;</span>
+<span class="nc" id="L479">		ShortProcessor n_ip=new ShortProcessor(width,height);</span>
+<span class="nc bnc" id="L480" title="All 2 branches missed.">		for (int i=0;i&lt;stackSize;i++){</span>
+<span class="nc" id="L481">			rt.addValue(&quot;Position x&quot;, i);</span>
+<span class="nc" id="L482">			int numPart=(int)ip.getf(start+1);</span>
+<span class="nc bnc" id="L483" title="All 2 branches missed.">			for (int j=0;j&lt;numPart;j++){</span>
+<span class="nc" id="L484">				int pos=(int)ip.getf(start+2+j);</span>
+<span class="nc" id="L485">				n_ip.set(pos,n_ip.get(pos)+ 1);</span>
+			}
+			
+<span class="nc" id="L488">			start+=numPart+2;</span>
+		}
+		
+<span class="nc" id="L491">		return rt;</span>
+	}
+	public ImagePlus projectTimeTrace(FloatProcessor ip){
+		
+<span class="nc" id="L495">		int stackSize=(int)ip.getf(0);</span>
+<span class="nc" id="L496">		int width=(int)ip.getf(1);</span>
+<span class="nc" id="L497">		int height=(int)ip.getf(2);</span>
+<span class="nc" id="L498">		int start=3;</span>
+<span class="nc" id="L499">		ShortProcessor n_ip=new ShortProcessor(width,height);</span>
+<span class="nc bnc" id="L500" title="All 2 branches missed.">		for (int i=0;i&lt;stackSize;i++){</span>
+			
+<span class="nc" id="L502">			int numPart=(int)ip.getf(start+1);</span>
+<span class="nc bnc" id="L503" title="All 2 branches missed.">			for (int j=0;j&lt;numPart;j++){</span>
+<span class="nc" id="L504">				int pos=(int)ip.getf(start+2+j);</span>
+<span class="nc" id="L505">				n_ip.set(pos,n_ip.get(pos)+ 1);</span>
+			}
+			
+<span class="nc" id="L508">			start+=numPart+2;</span>
+		}
+		
+<span class="nc" id="L511">		return new ImagePlus(&quot;Projected Time Trace&quot;,n_ip);</span>
+	}
+	
+	private ImagePlus projectTimeTrace(){
+		
+<span class="nc" id="L516">		int stackSize=store.get(0);</span>
+<span class="nc" id="L517">		int width=store.get(1);</span>
+<span class="nc" id="L518">		int height=store.get(2);</span>
+<span class="nc" id="L519">		int start=3;</span>
+<span class="nc" id="L520">		ShortProcessor n_ip=new ShortProcessor(width,height);</span>
+<span class="nc bnc" id="L521" title="All 2 branches missed.">		for (int i=0;i&lt;stackSize;i++){</span>
+			
+<span class="nc" id="L523">			int numPart=store.get(start+1);</span>
+<span class="nc bnc" id="L524" title="All 2 branches missed.">			for (int j=0;j&lt;numPart;j++){</span>
+<span class="nc" id="L525">				int pos=store.get(start+2+j);</span>
+<span class="nc" id="L526">				n_ip.set(pos,n_ip.get(pos)+ 1);</span>
+			}
+			
+<span class="nc" id="L529">			start+=numPart+2;</span>
+		}
+		
+<span class="nc" id="L532">		return new ImagePlus(&quot;Projected Time Trace&quot;,n_ip);</span>
+	}
+	
+	public FloatProcessor condensedTimeTrace(){
+<span class="nc" id="L536">		int size=store.size();</span>
+<span class="nc" id="L537">		int width=(int)(Math.sqrt(size))+1;</span>
+<span class="nc" id="L538">		FloatProcessor ip=new FloatProcessor(width,width);</span>
+<span class="nc bnc" id="L539" title="All 2 branches missed.">		for (int i=0;i&lt;size;i++){</span>
+<span class="nc" id="L540">			ip.setf(i, store.elementAt(i));</span>
+		}
+<span class="nc" id="L542">		return ip;</span>
+	}
+	
+	
+	 ImagePlus CreateStack(){
+	    	
+ 		
+<span class="nc" id="L549">	    	ImageStack ims = new ImageStack(framewidth, frameheight);</span>
+	    	
+	          		
+	    	
+<span class="nc" id="L553">			int dimension = framewidth*frameheight;</span>
+			
+<span class="nc" id="L555">			int pos=0;</span>
+	       		 
+<span class="nc bnc" id="L557" title="All 2 branches missed.">			for (int s=0; s&lt;numFrames;s++){</span>
+<span class="nc" id="L558">				IJ.showProgress(s, numFrames);</span>
+//				IJ.log(&quot;====================&quot;+s+&quot;. Frame ====================================&quot;);
+<span class="nc" id="L560">				byte[] sum = new byte [dimension];</span>
+<span class="nc bnc" id="L561" title="All 2 branches missed.">				if ((s%1)==0){</span>
+<span class="nc bnc" id="L562" title="All 2 branches missed.">				   for (int j=0; j&lt;(numParticles);j++) {</span>
+<span class="nc" id="L563">					   pos=YPos[j]*framewidth+XPos[j];</span>
+//					   IJ.log(&quot;&quot;+timeTrace[s][j]);
+<span class="nc bnc" id="L565" title="All 4 branches missed.">					   if (pos&gt;=0 &amp;&amp; pos&lt; dimension) {</span>
+<span class="nc" id="L566">						   	sum[pos]+=bright*timeTrace[s][j];</span>
+						   	
+					   }
+//					   else IJ.log(&quot;Slice&quot;+s+&quot;   Particle&quot;+j+&quot;  not included&quot;);
+					   
+				   }
+<span class="nc" id="L572">				   ImageProcessor ip = new ByteProcessor(framewidth, frameheight,sum);</span>
+				   
+<span class="nc" id="L574">				   ims.addSlice(&quot;Time=&quot;+s+&quot; s&quot;,ip);</span>
+				}
+			}
+			
+<span class="nc" id="L578">			nimp = new ImagePlus(checkTitle(stacktitle),ims);</span>
+<span class="nc" id="L579">			nimp.setCalibration(cal);</span>
+			
+<span class="nc" id="L581">			return nimp;			</span>
+
+		}
+	   ImagePlus getImagePlus(){
+<span class="nc bnc" id="L585" title="All 2 branches missed.">		   if (nimp!=null) return nimp;</span>
+<span class="nc" id="L586">		   else return CreateStack();</span>
+	   }
+	   private String checkPath(String path){
+<span class="nc bnc" id="L589" title="All 4 branches missed.">		   if (path.equals(path)|| path==null){</span>
+<span class="nc" id="L590">			   path=gridPath;</span>
+		   }
+<span class="nc" id="L592">		   return path;</span>
+	   }
+	   private String checkTitle(String input){
+<span class="nc" id="L595">		   String output=input;</span>
+<span class="nc" id="L596">		   int list []=WindowManager.getIDList();</span>
+<span class="nc" id="L597">		   int count =1;</span>
+<span class="nc bnc" id="L598" title="All 2 branches missed.">		   if (list != null){</span>
+			   	   
+<span class="nc bnc" id="L600" title="All 2 branches missed.">			   for (int i=0;i&lt;list.length;i++){</span>
+<span class="nc bnc" id="L601" title="All 2 branches missed.">				   if (WindowManager.getImage(list[i]).getTitle().equals(input)){</span>
+<span class="nc" id="L602">					   output=checkTitle(input+&quot;-&quot;+count);</span>
+<span class="nc" id="L603">					   count++;</span>
+				   }
+			   }
+		   }
+<span class="nc" id="L607">		   return output;</span>
+	   }
+	   /** Create a Thread[] array as large as the number of processors available. 
+	    * From Stephan Preibisch's Multithreading.java class. See: 
+	    * http://repo.or.cz/w/trakem2.git?a=blob;f=mpi/fruitfly/general/MultiThreading.java;hb=HEAD 
+	    */  
+	    private Thread[] newThreadArray() {  
+<span class="nc" id="L614">	        int n_cpus = Runtime.getRuntime().availableProcessors();  </span>
+<span class="nc" id="L615">	        return new Thread[n_cpus];  </span>
+	    }  
+	  
+	    /** Start all given threads and wait on each of them until all are done. 
+	    * From Stephan Preibisch's Multithreading.java class. See: 
+	    * http://repo.or.cz/w/trakem2.git?a=blob;f=mpi/fruitfly/general/MultiThreading.java;hb=HEAD 
+	    */  
+	    public static void startAndJoin(Thread[] threads)  
+	    {  
+<span class="nc bnc" id="L624" title="All 2 branches missed.">	        for (int ithread = 0; ithread &lt; threads.length; ++ithread)  </span>
+	        {  
+<span class="nc" id="L626">	            threads[ithread].setPriority(Thread.NORM_PRIORITY);  </span>
+<span class="nc" id="L627">	            threads[ithread].start();  </span>
+	        }  
+	  
+	        try  
+	        {     
+<span class="nc bnc" id="L632" title="All 2 branches missed.">	            for (int ithread = 0; ithread &lt; threads.length; ++ithread)  </span>
+<span class="nc" id="L633">	                threads[ithread].join();  </span>
+<span class="nc" id="L634">	        } catch (InterruptedException ie)  </span>
+	        {  
+<span class="nc" id="L636">	            throw new RuntimeException(ie);  </span>
+	        }  
+<span class="nc" id="L638">	    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

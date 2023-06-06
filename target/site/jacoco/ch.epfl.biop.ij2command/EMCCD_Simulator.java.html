@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>EMCCD_Simulator.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">LocalizeJ</a> &gt; <a href="index.source.html" class="el_package">ch.epfl.biop.ij2command</a> &gt; <span class="el_source">EMCCD_Simulator.java</span></div><h1>EMCCD_Simulator.java</h1><pre class="source lang-java linenums">package ch.epfl.biop.ij2command;
+import ij.IJ;
+import ij.ImagePlus;
+import ij.ImageStack;
+import ij.measure.Calibration;
+import ij.process.ImageProcessor;
+
+
+public class EMCCD_Simulator extends DetectorSimulator {
+<span class="nc" id="L10">	private boolean knownCamera=false;</span>
+	
+<span class="nc" id="L12">	public double gainfactor=1000;</span>
+	
+	public EMCCD_Simulator(double pixelSize, int exposureTime, double quantumEff, ImageProcessor ip){
+<span class="nc" id="L15">		super(pixelSize,exposureTime,quantumEff/2, ip);</span>
+		
+<span class="nc" id="L17">	}</span>
+		
+	public EMCCD_Simulator(ImagePlus imp, double gain){
+<span class="nc" id="L20">		super(imp,0.46,0.001,0.0018,0.105*gain,10);</span>
+<span class="nc" id="L21">		this.gainfactor=gain;</span>
+<span class="nc" id="L22">	}</span>
+	public EMCCD_Simulator(ImagePlus imp, double quant, double dark, double cic, double read, double exp, double gain){
+<span class="nc" id="L24">		super(imp,quant/2,dark,cic,read*gain,exp);</span>
+<span class="nc" id="L25">		this.gainfactor=gain;</span>
+<span class="nc" id="L26">	}</span>
+	
+	public EMCCD_Simulator(ImagePlus imp, CameraDialog cd){
+<span class="nc" id="L29">		super(imp,cd.quant/2,cd.dark,cd.cic,cd.read*cd.emGain,cd.exp);</span>
+<span class="nc" id="L30">		this.gainfactor=cd.emGain;</span>
+<span class="nc" id="L31">	}</span>
+	
+	public EMCCD_Simulator(ImageProcessor ip, double quantumEff,Calibration cal){
+<span class="nc" id="L34">			super(ip,quantumEff,cal);</span>
+<span class="nc" id="L35">	}</span>
+	public ImagePlus run(){
+<span class="nc" id="L37">		int slice=super.getImagePlus().getStackSize();</span>
+<span class="nc" id="L38">		super.setTitle(&quot;EM CCD Camera&quot;);</span>
+<span class="nc bnc" id="L39" title="All 2 branches missed.">		if (slice==1){</span>
+<span class="nc" id="L40">			this.setImageProcessor(this.PoissonNoise());</span>
+<span class="nc" id="L41">			this.setImageProcessor(this.Bimodal());</span>
+<span class="nc" id="L42">			this.setImageProcessor(this.EMGain(gainfactor));</span>
+<span class="nc" id="L43">			this.setImageProcessor(this.ReadNoise());</span>
+<span class="nc" id="L44">			this.cam_imp.setProcessor(this.cam_ip);</span>
+<span class="nc" id="L45">		}</span>
+		else {
+			
+<span class="nc" id="L48">			ImageStack stack=this.getImagePlus().createEmptyStack();</span>
+			
+<span class="nc bnc" id="L50" title="All 2 branches missed.">			for (int i=1;i&lt;=slice;i++){</span>
+<span class="nc" id="L51">				IJ.showProgress(i/slice);</span>
+				
+<span class="nc" id="L53">				this.getImagePlus().setSliceWithoutUpdate(i);</span>
+<span class="nc" id="L54">				EMCCD_Simulator ccd=new EMCCD_Simulator(this.getProcessor().duplicate(),this.getQuantumEff(),this.getCalibration());</span>
+
+<span class="nc" id="L56">					ccd.run();</span>
+<span class="nc" id="L57">					stack.addSlice(ccd.getProcessor());</span>
+
+			}
+<span class="nc" id="L60">			this.setImagePlus(stack);</span>
+		}
+<span class="nc" id="L62">		return this.getImagePlus();</span>
+	}
+	
+	ImagePlus resultStack(){
+		 
+<span class="nc" id="L67">		 ImageStack stack=new ImageStack(super.getWidth(),super.getHeight());</span>
+<span class="nc" id="L68">		 stack.addSlice(this.getImagePlus().getProcessor().duplicate().convertToFloat());</span>
+<span class="nc" id="L69">		 stack.addSlice(this.PoissonNoise().duplicate().convertToFloat());</span>
+<span class="nc" id="L70">		 stack.addSlice(this.Bimodal().duplicate());</span>
+		 
+<span class="nc" id="L72">		 return new ImagePlus(&quot;Noise stack&quot;,stack);</span>
+	 }
+	
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

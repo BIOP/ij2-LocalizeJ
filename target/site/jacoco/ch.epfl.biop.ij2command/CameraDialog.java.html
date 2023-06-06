@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>CameraDialog.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">LocalizeJ</a> &gt; <a href="index.source.html" class="el_package">ch.epfl.biop.ij2command</a> &gt; <span class="el_source">CameraDialog.java</span></div><h1>CameraDialog.java</h1><pre class="source lang-java linenums">package ch.epfl.biop.ij2command;
+import ij.IJ;
+import ij.ImagePlus;
+import ij.WindowManager;
+import ij.gui.GenericDialog;
+import ij.plugin.PlugIn;
+import ij.process.ImageProcessor;
+
+
+public class CameraDialog {
+	
+	GenericDialog gd;
+<span class="nc" id="L13">	double photon=200;</span>
+<span class="nc" id="L14">	String choice=DetectorSimulator.type[0];</span>
+<span class="nc" id="L15">	double quant=0.7;</span>
+<span class="nc" id="L16">	double dark=0.0005;</span>
+<span class="nc" id="L17">	double cic=0.001;</span>
+<span class="nc" id="L18">	double exp=10;</span>
+<span class="nc" id="L19">	double read=5;</span>
+<span class="nc" id="L20">	double emGain=1000;</span>
+	boolean preset;
+		
+<span class="nc" id="L23">	CameraDialog(){</span>
+		
+<span class="nc" id="L25">		gd=new GenericDialog(&quot;Camera Parameters&quot;);</span>
+<span class="nc" id="L26">		gd.addNumericField(&quot;PhotonFlux&quot;, photon,0);</span>
+<span class="nc" id="L27">		gd.addChoice(&quot;Camera Type&quot;, DetectorSimulator.type, choice);</span>
+<span class="nc" id="L28">		gd.addNumericField(&quot;QE&quot;, quant, 2);</span>
+<span class="nc" id="L29">		gd.addNumericField(&quot;Dark noise cps:&quot;, dark, 4);</span>
+<span class="nc" id="L30">		gd.addNumericField(&quot;CIC noise cps:&quot;, cic, 4);</span>
+<span class="nc" id="L31">		gd.addNumericField(&quot;Read Noise&quot;, read, 0);</span>
+<span class="nc" id="L32">		gd.addNumericField(&quot;Exposure Time ms:&quot;,exp,0);</span>
+<span class="nc" id="L33">		gd.addNumericField(&quot;EM gain&quot;, emGain, 0);</span>
+<span class="nc" id="L34">		gd.addCheckbox(&quot;Preset camera parameters&quot;, true);</span>
+<span class="nc" id="L35">	}</span>
+	
+	public void showDialog() {
+		
+<span class="nc" id="L39">		gd.showDialog();</span>
+<span class="nc bnc" id="L40" title="All 2 branches missed.">		if (gd.wasCanceled()) return;</span>
+		
+<span class="nc" id="L42">		photon=gd.getNextNumber();</span>
+<span class="nc" id="L43">		choice=gd.getNextChoice();</span>
+<span class="nc" id="L44">		quant=gd.getNextNumber();</span>
+<span class="nc" id="L45">		dark=gd.getNextNumber();</span>
+<span class="nc" id="L46">		cic=gd.getNextNumber();</span>
+<span class="nc" id="L47">		read=gd.getNextNumber();</span>
+<span class="nc" id="L48">		exp=gd.getNextNumber();</span>
+<span class="nc" id="L49">		emGain=gd.getNextNumber();</span>
+<span class="nc" id="L50">		preset=gd.getNextBoolean();</span>
+			
+<span class="nc" id="L52">	}</span>
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

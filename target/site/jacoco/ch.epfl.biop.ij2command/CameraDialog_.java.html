@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>CameraDialog_.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">LocalizeJ</a> &gt; <a href="index.source.html" class="el_package">ch.epfl.biop.ij2command</a> &gt; <span class="el_source">CameraDialog_.java</span></div><h1>CameraDialog_.java</h1><pre class="source lang-java linenums">package ch.epfl.biop.ij2command;
+import ij.IJ;
+import ij.ImagePlus;
+import ij.WindowManager;
+import ij.gui.GenericDialog;
+import ij.plugin.PlugIn;
+import ij.process.ImageProcessor;
+
+
+<span class="nc" id="L10">public class CameraDialog_ implements PlugIn{</span>
+
+		
+	public void run(String arg) {
+<span class="nc" id="L14">		ImagePlus imp=IJ.openImage();</span>
+		
+<span class="nc" id="L16">		CameraDialog cd=new CameraDialog();</span>
+<span class="nc" id="L17">		cd.showDialog();</span>
+		
+<span class="nc" id="L19">		ImageProcessor ip=imp.getProcessor().duplicate();</span>
+<span class="nc" id="L20">		double max=ip.maxValue();</span>
+<span class="nc" id="L21">		ip=ip.convertToShort(false);</span>
+			
+<span class="nc" id="L23">		ip.multiply(cd.photon/max);</span>
+<span class="nc" id="L24">		imp.setProcessor(ip);</span>
+				
+<span class="nc bnc" id="L26" title="All 4 branches missed.">		switch (selectCameraType(cd.choice)){</span>
+		case 0: CCD_Simulator ccd;
+<span class="nc bnc" id="L28" title="All 2 branches missed.">				if (cd.preset) ccd=new CCD_Simulator(imp);</span>
+<span class="nc" id="L29">				else ccd=new CCD_Simulator(imp,cd.quant,cd.dark,cd.cic,cd.read,cd.exp);</span>
+<span class="nc" id="L30">				imp=ccd.run();</span>
+<span class="nc" id="L31">				break;</span>
+<span class="nc" id="L32">		case 1: IJ.showMessage(&quot;...non valid choice&quot;);</span>
+<span class="nc" id="L33">				break;</span>
+		case 2: EMCCD_Simulator emccd;
+<span class="nc bnc" id="L35" title="All 2 branches missed.">				if (cd.preset) emccd=new EMCCD_Simulator(imp,cd.emGain);</span>
+<span class="nc" id="L36">				else emccd=new EMCCD_Simulator(imp,cd.quant,cd.dark,cd.cic,cd.read,cd.exp,cd.emGain);</span>
+<span class="nc" id="L37">				imp=emccd.run();</span>
+		}
+<span class="nc" id="L39">	imp.show();	</span>
+<span class="nc" id="L40">	}</span>
+int selectCameraType(String choice){
+<span class="nc" id="L42">	int i=0;</span>
+<span class="nc bnc" id="L43" title="All 2 branches missed.">	for (i=0;i&lt;CameraSimulator.type.length;i++){</span>
+<span class="nc bnc" id="L44" title="All 2 branches missed.">		if (choice.equals(CameraSimulator.type[i])) break;</span>
+	}
+<span class="nc" id="L46">	return i;</span>
+}
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

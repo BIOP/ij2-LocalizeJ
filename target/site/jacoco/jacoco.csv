@@ -1,0 +1,16 @@
+GROUP,PACKAGE,CLASS,INSTRUCTION_MISSED,INSTRUCTION_COVERED,BRANCH_MISSED,BRANCH_COVERED,LINE_MISSED,LINE_COVERED,COMPLEXITY_MISSED,COMPLEXITY_COVERED,METHOD_MISSED,METHOD_COVERED
+LocalizeJ,ch.epfl.biop.ij2command,PMTDialog,80,0,2,0,20,0,4,0,3,0
+LocalizeJ,ch.epfl.biop.ij2command,DetectorSimulator,818,0,54,0,183,0,55,0,27,0
+LocalizeJ,ch.epfl.biop.ij2command,PMT_Dialog,57,0,6,0,16,0,5,0,2,0
+LocalizeJ,ch.epfl.biop.ij2command,PMT_Simulator,91,0,4,0,21,0,6,0,4,0
+LocalizeJ,ch.epfl.biop.ij2command,DiffractionGenerator,1219,0,60,0,221,0,51,0,21,0
+LocalizeJ,ch.epfl.biop.ij2command,CameraDialog,150,0,2,0,32,0,3,0,2,0
+LocalizeJ,ch.epfl.biop.ij2command,EMCCD_Simulator,209,0,4,0,38,0,9,0,7,0
+LocalizeJ,ch.epfl.biop.ij2command,DiffractionDialog,102,0,2,0,22,0,4,0,3,0
+LocalizeJ,ch.epfl.biop.ij2command,MaskBlinkDialog,231,0,16,0,60,0,10,0,2,0
+LocalizeJ,ch.epfl.biop.ij2command,DetectorDialog,120,0,12,0,25,0,10,0,3,0
+LocalizeJ,ch.epfl.biop.ij2command,TimeGenerator,1979,0,136,0,339,0,108,0,40,0
+LocalizeJ,ch.epfl.biop.ij2command,BlinkGenerator,506,0,20,0,101,0,19,0,9,0
+LocalizeJ,ch.epfl.biop.ij2command,LocalizeJ_Dialog,113,0,4,0,25,0,5,0,3,0
+LocalizeJ,ch.epfl.biop.ij2command,CCD_Simulator,183,0,4,0,36,0,10,0,8,0
+LocalizeJ,ch.epfl.biop.ij2command,BesselWindow,238,0,4,0,39,0,5,0,3,0

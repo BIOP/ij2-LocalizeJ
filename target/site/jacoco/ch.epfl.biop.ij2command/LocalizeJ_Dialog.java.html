@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>LocalizeJ_Dialog.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">LocalizeJ</a> &gt; <a href="index.source.html" class="el_package">ch.epfl.biop.ij2command</a> &gt; <span class="el_source">LocalizeJ_Dialog.java</span></div><h1>LocalizeJ_Dialog.java</h1><pre class="source lang-java linenums">package ch.epfl.biop.ij2command;
+
+import java.io.File;
+
+import org.scijava.command.Command;
+import org.scijava.plugin.Parameter;
+import org.scijava.plugin.Plugin;
+import net.imagej.ImageJ;
+import ij.IJ;
+
+import ij.ImagePlus;
+
+/**
+ * This example illustrates how to create an ImageJ 2 {@link Command} plugin.
+ * The pom file of this project is customized for the PTBIOP Organization (biop.epfl.ch)
+ * &lt;p&gt;
+ * The code here is opening the biop website. The command can be tested in the java DummyCommandTest class.
+ * &lt;/p&gt;
+ */
+
+@Plugin(type = Command.class, menuPath = &quot;Plugins&gt;BIOP&gt;LocalizeJ&quot;)
+<span class="nc" id="L22">public class LocalizeJ_Dialog implements Command {</span>
+
+	@Parameter(style=&quot;open&quot;, label=&quot;Pattern&quot;)
+    File pattern;
+	
+	@Parameter(style=&quot;open&quot;, label=&quot;PSF&quot;)
+    File psf;
+	
+/*	@Parameter
+    int width;
+
+    @Parameter
+    int height;
+*/    
+    @Parameter(label=&quot;k on&quot;)
+    double kon;
+    
+    @Parameter(label=&quot;k off&quot;)
+    double koff;
+    
+    @Parameter(label=&quot;bleaching rate&quot;)
+    double bleach;
+    
+//    @Parameter
+//    int band;
+    @Parameter(label=&quot;number of photons/molecule&quot;)
+    int photons;
+    
+    @Parameter(label=&quot;number of molecules&quot;)
+    int numMol;
+    
+    @Parameter(label=&quot;number of frames&quot;)
+    int frames;
+    
+    @Override
+    public void run() {
+    	
+<span class="nc" id="L59">    	IJ.log(&quot;Please specify the Camera Parameters&quot;);</span>
+<span class="nc" id="L60">		CameraDialog cd=new CameraDialog();</span>
+<span class="nc" id="L61">		cd.showDialog();</span>
+		
+<span class="nc" id="L63">    	TimeGenerator time=new TimeGenerator(1024,1024);</span>
+<span class="nc" id="L64">		time.setParticleNumber(numMol);</span>
+<span class="nc" id="L65">		time.setFrameNumber(frames);</span>
+<span class="nc" id="L66">		time.setOnRate(kon);</span>
+<span class="nc" id="L67">		time.setOffRate(koff);</span>
+<span class="nc" id="L68">		time.setBleachRate(bleach); </span>
+<span class="nc" id="L69">		time.generateMask(pattern.getAbsolutePath());</span>
+    	
+<span class="nc" id="L71">		time.heavyTimeTrace();</span>
+/*		if (saveTime){
+			IJ.save(new ImagePlus(&quot;TimeTrace condensed&quot;,time.condensedTimeTrace()),timeName);
+		}
+		
+		if (project) time.getProjectedTimeTrace().show();
+*/		
+<span class="nc" id="L78">		ImagePlus imp=IJ.openImage(psf.getAbsolutePath());</span>
+//		IJ.open(psf.getAbsolutePath());
+//		ImagePlus imp=WindowManager.getCurrentImage();
+		
+<span class="nc" id="L82">		DiffractionGenerator dg=new DiffractionGenerator(time,photons,imp.getProcessor(),new DiffractionDialog());</span>
+//		dg.multiThreadCalculate().show();
+		
+<span class="nc bnc" id="L85" title="All 2 branches missed.">		if (cd.choice.equals(DetectorSimulator.type[0])){</span>
+//			CCD_Simulator ccd=new CCD_Simulator(dg.multiThreadCalculate(),cd);
+<span class="nc" id="L87">			CCD_Simulator ccd=new CCD_Simulator(dg.calculate(),cd);</span>
+				
+/*			if (saveBlink){
+				IJ.save(ccd.run(),blinkName);
+<span class="nc" id="L91">			} else */ ccd.run().show();</span>
+		}
+		
+<span class="nc bnc" id="L94" title="All 2 branches missed.">		if (cd.choice.equals(DetectorSimulator.type[2])){</span>
+//			EMCCD_Simulator emccd=new EMCCD_Simulator(dg.multiThreadCalculate(),cd);
+<span class="nc" id="L96">			EMCCD_Simulator emccd=new EMCCD_Simulator(dg.calculate(),cd);	</span>
+/*			if (saveBlink){
+				IJ.save(emccd.run(),blinkName);
+<span class="nc" id="L99">			} else */ emccd.run().show();</span>
+		}
+    	    	
+    	
+<span class="nc" id="L103">    }</span>
+
+    /**
+     * This main function serves for development purposes.
+     * It allows you to run the plugin immediately out of
+     * your integrated development environment (IDE).
+     *
+     * @param args whatever, it's ignored
+     * @throws Exception
+     */
+    public static void main(final String... args) throws Exception {
+        // create the ImageJ application context with all available services
+<span class="nc" id="L115">        final ImageJ ij = new ImageJ();</span>
+<span class="nc" id="L116">        ij.ui().showUI();</span>
+
+<span class="nc" id="L118">        ij.command().run(LocalizeJ_Dialog.class, true);</span>
+<span class="nc" id="L119">    }</span>
+}
+
+
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>DiffractionDialog.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">LocalizeJ</a> &gt; <a href="index.source.html" class="el_package">ch.epfl.biop.ij2command</a> &gt; <span class="el_source">DiffractionDialog.java</span></div><h1>DiffractionDialog.java</h1><pre class="source lang-java linenums">package ch.epfl.biop.ij2command;
+import ij.IJ;
+import ij.ImagePlus;
+import ij.WindowManager;
+import ij.gui.GenericDialog;
+import ij.plugin.PlugIn;
+import ij.process.ImageProcessor;
+
+
+public class DiffractionDialog {
+	
+	GenericDialog gd;
+<span class="nc" id="L13">	int wave=488;</span>
+<span class="nc" id="L14">	double na=1.4;</span>
+<span class="nc" id="L15">	int pixel=5;</span>
+<span class="nc" id="L16">	int camerapixel=80;</span>
+<span class="nc" id="L17">	int scale=camerapixel/pixel;</span>
+	
+<span class="nc" id="L19">	DiffractionDialog(){</span>
+				
+<span class="nc" id="L21">	}</span>
+	
+	public void showDialog() {
+		
+<span class="nc" id="L25">		gd=new GenericDialog(&quot;Diffraction Parameters&quot;);</span>
+<span class="nc" id="L26">		gd.addNumericField(&quot;Wavelength/nm&quot;, wave,0);</span>
+<span class="nc" id="L27">		gd.addNumericField(&quot;NA objective&quot;, na,2);</span>
+<span class="nc" id="L28">		gd.addNumericField(&quot;Pixelsize_PSF [nm]&quot;, pixel, 0);</span>
+<span class="nc" id="L29">		gd.addNumericField(&quot;Pixelsize_camera [nm]&quot;, camerapixel, 0);</span>
+		
+<span class="nc" id="L31">		gd.showDialog();</span>
+<span class="nc bnc" id="L32" title="All 2 branches missed.">		if (gd.wasCanceled()) return;</span>
+		
+<span class="nc" id="L34">		wave=(int)gd.getNextNumber();</span>
+<span class="nc" id="L35">		na=gd.getNextNumber();</span>
+<span class="nc" id="L36">		pixel=(int)gd.getNextNumber();</span>
+<span class="nc" id="L37">		camerapixel=(int)gd.getNextNumber();</span>
+		
+<span class="nc" id="L39">		scale=camerapixel/pixel;	</span>
+<span class="nc" id="L40">	}</span>
+	
+	void setScale(int setScale) {
+<span class="nc" id="L43">		this.scale=setScale;</span>
+<span class="nc" id="L44">	}</span>
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>

@@ -1,0 +1,430 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>DiffractionGenerator.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">LocalizeJ</a> &gt; <a href="index.source.html" class="el_package">ch.epfl.biop.ij2command</a> &gt; <span class="el_source">DiffractionGenerator.java</span></div><h1>DiffractionGenerator.java</h1><pre class="source lang-java linenums">package ch.epfl.biop.ij2command;
+import ij.IJ;
+import ij.ImagePlus;
+import ij.ImageStack;
+import ij.process.FHT;
+import ij.process.ImageProcessor;
+import ij.process.ShortProcessor;
+import imagescience.random.BinomialGenerator;
+import imagescience.random.PoissonGenerator;
+
+public class DiffractionGenerator extends Thread {
+	
+	// ===============used for multithreading only ========================== 
+	//start and stop for the individual threads
+<span class="nc" id="L15">	private int start=0;</span>
+<span class="nc" id="L16">	private int stop=0;</span>
+<span class="nc" id="L17">	private int multiStackSize=0;</span>
+	//number of processors
+<span class="nc" id="L19">	private final static int n_cpus=Runtime.getRuntime().availableProcessors();</span>
+	//=======================================================================
+<span class="nc" id="L21">	private boolean isTimeGenerator=false;</span>
+<span class="nc" id="L22">	private boolean isStack=false;</span>
+	
+	private ImageStack timeStack;
+	private TimeGenerator tg;
+	private static ImageProcessor ip_time;
+<span class="nc" id="L27">	private static ImageProcessor ip_psf; </span>
+	private ImageProcessor [] res_ip;
+	
+	private int nFrames;
+	private int width;
+	private int height;
+	
+	private DiffractionDialog dd;
+	//================Simple PSF parameters=================================
+<span class="nc" id="L36">	private int pixel_size_time=5;</span>
+<span class="nc" id="L37">	private int lambda=488;</span>
+<span class="nc" id="L38">	private double na=1.4;</span>
+<span class="nc" id="L39">	private int scaleFactor=16;</span>
+	
+	//===============Camera Parameters===no longer used===================================
+<span class="nc" id="L42">	private double darkNoise=400;</span>
+<span class="nc" id="L43">	private double darkStdv=63.0;</span>
+<span class="nc" id="L44">	private double quantumEff=0.7;</span>
+	
+<span class="nc" id="L46">	private double photons=7000/(2.506*2.506);</span>
+	
+	//=====================Constructors===================================================
+	
+<span class="nc" id="L50">	public DiffractionGenerator(ImagePlus imp){</span>
+		
+<span class="nc" id="L52">		BesselWindow bw=new BesselWindow(imp.getWidth(),imp.getHeight(),pixel_size_time,lambda,na);</span>
+<span class="nc" id="L53">		ip_psf=bw.calc().getProcessor();</span>
+<span class="nc" id="L54">		ip_time=imp.getProcessor();</span>
+<span class="nc" id="L55">	}</span>
+	
+<span class="nc" id="L57">	public DiffractionGenerator(TimeGenerator tg, double photons, ImageProcessor psf, DiffractionDialog dd){</span>
+<span class="nc" id="L58">		isTimeGenerator=true;</span>
+		
+<span class="nc" id="L60">		this.tg=tg;</span>
+<span class="nc" id="L61">		this.nFrames=tg.getStackSize(); </span>
+<span class="nc" id="L62">		this.photons=photons;</span>
+<span class="nc" id="L63">		this.scaleFactor=16;</span>
+<span class="nc" id="L64">		this.dd=dd;</span>
+<span class="nc bnc" id="L65" title="All 2 branches missed.">		if (!tg.isCondensed()) return;</span>
+//		BesselWindow bw=new BesselWindow(tg.getWidth(),tg.getHeight(),dd.pixel,dd.wave,dd.na);
+<span class="nc" id="L67">		ip_psf=psf.convertToFloat();</span>
+<span class="nc" id="L68">		IJ.log(&quot;Diff Generator: check&quot;);</span>
+		
+<span class="nc" id="L70">	}</span>
+	
+<span class="nc" id="L72">	public DiffractionGenerator(TimeGenerator tg, double photons, DiffractionDialog dd){</span>
+<span class="nc" id="L73">		isTimeGenerator=true;</span>
+<span class="nc" id="L74">		this.dd=dd;</span>
+<span class="nc" id="L75">		this.tg=tg;</span>
+<span class="nc" id="L76">		this.nFrames=tg.getStackSize(); </span>
+<span class="nc" id="L77">		this.photons=photons;</span>
+<span class="nc" id="L78">		this.scaleFactor=dd.scale;</span>
+		
+<span class="nc bnc" id="L80" title="All 2 branches missed.">		if (!tg.isCondensed()) return;</span>
+<span class="nc" id="L81">		BesselWindow bw=new BesselWindow(tg.getWidth(),tg.getHeight(),dd.pixel,dd.wave,dd.na);</span>
+<span class="nc" id="L82">		ip_psf=bw.calc().getProcessor();</span>
+		
+<span class="nc" id="L84">	}</span>
+	
+<span class="nc" id="L86">	public DiffractionGenerator(TimeGenerator tg,int start,int stop, DiffractionDialog dd){</span>
+<span class="nc" id="L87">		isTimeGenerator=true;</span>
+<span class="nc" id="L88">		this.dd=dd;</span>
+<span class="nc" id="L89">		this.scaleFactor=dd.scale;</span>
+<span class="nc" id="L90">		this.tg=tg;</span>
+<span class="nc" id="L91">		this.width=tg.getWidth();</span>
+<span class="nc" id="L92">		this.height=tg.getHeight();</span>
+<span class="nc" id="L93">		this.nFrames=tg.getStackSize(); </span>
+<span class="nc" id="L94">		this.start=start;</span>
+<span class="nc" id="L95">		this.stop=stop;</span>
+<span class="nc" id="L96">		this.multiStackSize=stop-start+1;</span>
+<span class="nc bnc" id="L97" title="All 2 branches missed.">		if (!tg.isCondensed()) return;</span>
+<span class="nc" id="L98">		BesselWindow bw=new BesselWindow(tg.getWidth(),tg.getHeight(),pixel_size_time,lambda,na);</span>
+<span class="nc" id="L99">		ip_psf=bw.calc().getProcessor();</span>
+		
+<span class="nc" id="L101">	}</span>
+	
+<span class="nc" id="L103">	public DiffractionGenerator(ImageStack stack){</span>
+<span class="nc bnc" id="L104" title="All 2 branches missed.">		if (stack.getSize()&lt;2) return;</span>
+<span class="nc" id="L105">		this.isStack=true;</span>
+<span class="nc" id="L106">		nFrames=stack.getSize();</span>
+<span class="nc" id="L107">		timeStack=stack;</span>
+<span class="nc" id="L108">		width=stack.getWidth();</span>
+<span class="nc" id="L109">		height=stack.getHeight();</span>
+		
+<span class="nc" id="L111">		BesselWindow bw=new BesselWindow(stack.getWidth(),stack.getHeight(),pixel_size_time,lambda,na);</span>
+<span class="nc" id="L112">		ip_psf=bw.calc().getProcessor();</span>
+//		ImagePlus imp_psf=new ImagePlus(&quot;&quot;,ip_psf);
+//		imp_psf.show();
+<span class="nc" id="L115">	}</span>
+	//==================set() and get()===================================================
+	ImagePlus getSingleImage(){
+<span class="nc" id="L118">		ImageProcessor ip=convolve().duplicate();</span>
+<span class="nc" id="L119">		width=ip.getWidth();</span>
+<span class="nc" id="L120">		height=ip.getHeight();</span>
+		
+<span class="nc" id="L122">		ip.setInterpolate(true);</span>
+<span class="nc" id="L123">		ip.setInterpolationMethod(ImageProcessor.NONE);</span>
+<span class="nc" id="L124">		ip=ip.resize(width/scaleFactor, height/scaleFactor);</span>
+<span class="nc" id="L125">		ip=ip.convertToShort(false);</span>
+<span class="nc" id="L126">		return new ImagePlus(&quot;&quot;,ip);</span>
+	}
+	
+	public void setPhotons(double photons){
+<span class="nc" id="L130">		this.photons=photons;</span>
+<span class="nc" id="L131">	}</span>
+	public int getPhotons(){
+<span class="nc" id="L133">		return (int)this.photons;</span>
+	}
+//====================== ImageProcessors =============================
+	ImageProcessor PoissonNoise(ImageProcessor ip){
+<span class="nc" id="L137">		PoissonGenerator pg=new PoissonGenerator();</span>
+<span class="nc" id="L138">		final int width=ip.getWidth();</span>
+<span class="nc" id="L139">		final int height=ip.getHeight();</span>
+		double seed;
+<span class="nc bnc" id="L141" title="All 2 branches missed.">		for (int i=0;i&lt;width;i++){</span>
+<span class="nc bnc" id="L142" title="All 2 branches missed.">			for (int j=0;j&lt;height;j++){</span>
+<span class="nc" id="L143">				seed=Float.intBitsToFloat(ip.getPixel(i, j));</span>
+<span class="nc" id="L144">				seed=pg.next(seed);</span>
+<span class="nc" id="L145">				ip.putPixelValue(i, j, seed);</span>
+			}
+		}
+<span class="nc" id="L148">		return ip;</span>
+		
+	}
+	public ImageProcessor Bimodal(ImageProcessor ip){
+		
+		
+		
+<span class="nc" id="L155">		final int w=ip.getWidth();</span>
+<span class="nc" id="L156">		final int h=ip.getHeight();</span>
+		int phot;
+<span class="nc" id="L158">		final ImageProcessor out=new ShortProcessor(w,h);</span>
+<span class="nc" id="L159">		final BinomialGenerator bmg=new BinomialGenerator(20,quantumEff);</span>
+		
+<span class="nc bnc" id="L161" title="All 2 branches missed.">		for (int i=0; i&lt;w;i++){</span>
+<span class="nc" id="L162">			IJ.showProgress(i, w);</span>
+<span class="nc bnc" id="L163" title="All 2 branches missed.">			for (int j=0;j&lt;h;j++){</span>
+<span class="nc" id="L164">				phot=ip.get(i,j);</span>
+				
+<span class="nc" id="L166">				out.set(i+w*j, (int)((bmg.next()*phot)/20));</span>
+				
+				
+			}
+		}
+		
+		
+<span class="nc" id="L173">		return out;</span>
+	}
+	
+	ImagePlus multiThreadCalculate(){
+		
+<span class="nc" id="L178">		IJ.log(&quot;Start multiThread&quot;);</span>
+<span class="nc" id="L179">		long start=System.currentTimeMillis();</span>
+		
+<span class="nc" id="L181">		this.width=tg.getWidth();</span>
+<span class="nc" id="L182">		this.height=tg.getHeight();</span>
+		
+<span class="nc" id="L184">		final DiffractionGenerator [] calculate = new DiffractionGenerator(this.tg,this.getPhotons(),this.dd).getArray(); </span>
+<span class="nc" id="L185">		final ImageStack resultStack=new ImageStack(this.width/scaleFactor,this.height/scaleFactor);  </span>
+<span class="nc" id="L186">		IJ.log(&quot;startAndJoin&quot;);</span>
+<span class="nc" id="L187">		startAndJoin(calculate);</span>
+		
+<span class="nc" id="L189">		long end=System.currentTimeMillis();    </span>
+<span class="nc" id="L190">		IJ.log(&quot;Processing time convolution in sec: &quot;+(end-start)/1000);</span>
+
+//	    for (int i=0;i&lt;nFrames;i++){
+//	        	resultStack.addSlice(res_ip[i]);
+//	    }  
+	    
+
+	    
+	                	
+	    
+<span class="nc" id="L200">	    return new ImagePlus(&quot;Conv&quot;,DiffractionGenerator.getResultStack(calculate));</span>
+	}
+	public void run(){
+<span class="nc" id="L203">		int w=0;</span>
+<span class="nc" id="L204">	    int h=0;</span>
+	    
+<span class="nc bnc" id="L206" title="All 2 branches missed.">		if (isStack){</span>
+<span class="nc" id="L207">	    	w=timeStack.getWidth();</span>
+<span class="nc" id="L208">	    	h=timeStack.getHeight();</span>
+	    }
+<span class="nc bnc" id="L210" title="All 2 branches missed.">	    if (isTimeGenerator){</span>
+<span class="nc" id="L211">	    	w=tg.getWidth();</span>
+<span class="nc" id="L212">	    	h=tg.getHeight();</span>
+	    }
+<span class="nc" id="L214">		ImageProcessor calc=new ShortProcessor(w,h);</span>
+<span class="nc" id="L215">		this.res_ip=new ImageProcessor[this.multiStackSize];</span>
+<span class="nc" id="L216">		int count=0;</span>
+<span class="nc bnc" id="L217" title="All 2 branches missed.">	    for (int i=start;i&lt;=stop;i++){</span>
+<span class="nc bnc" id="L218" title="All 2 branches missed.">	    	if (i%(nFrames/20)==0) IJ.showStatus(&quot;Complex conjugate multiply &quot;+i+&quot;/ &quot;+nFrames);</span>
+	                		
+<span class="nc bnc" id="L220" title="All 2 branches missed.">	        if (isStack) ip_time=timeStack.getProcessor(i+1);</span>
+<span class="nc bnc" id="L221" title="All 2 branches missed.">	        if (isTimeGenerator) ip_time=tg.getSlice(i);</span>
+	        
+	        
+	        //new ImagePlus(&quot;frame &quot;+i,ip_time).show();
+	        
+<span class="nc" id="L226">	        calc=new ImagePlus(&quot;Test&quot;, convolve()).getProcessor();</span>
+<span class="nc" id="L227">	        calc.multiply(photons);</span>
+	                			                		
+<span class="nc" id="L229">	        calc.setInterpolate(false);</span>
+<span class="nc" id="L230">	        calc.setInterpolationMethod(ImageProcessor.NONE);</span>
+	                		
+<span class="nc" id="L232">	        this.res_ip[count]=calc.resize(width/scaleFactor, height/scaleFactor);</span>
+	                		
+	                		
+<span class="nc" id="L235">	        this.res_ip[count].setMinAndMax(0, 65532);</span>
+<span class="nc" id="L236">	        this.res_ip[count]=res_ip[count].convertToShort(true);</span>
+<span class="nc" id="L237">	        count++;</span>
+	    }    
+//	    IJ.log(&quot;Core processing finished&quot;);    
+	    
+	     
+			
+<span class="nc" id="L243">	}</span>
+	ImagePlus calculate(){
+<span class="nc bnc" id="L245" title="All 2 branches missed.">		if (isStack){</span>
+<span class="nc" id="L246">			this.width=timeStack.getWidth()/scaleFactor;</span>
+<span class="nc" id="L247">			this.height=timeStack.getHeight()/scaleFactor;</span>
+			
+			
+		}
+<span class="nc bnc" id="L251" title="All 2 branches missed.">		if (isTimeGenerator){</span>
+<span class="nc" id="L252">			this.width=tg.getWidth()/scaleFactor;</span>
+<span class="nc" id="L253">			this.height=tg.getHeight()/scaleFactor;</span>
+		}
+		
+<span class="nc" id="L256">		final ImageStack resultStack=new ImageStack(this.width,this.height);  </span>
+<span class="nc" id="L257">		final long start=System.currentTimeMillis(); </span>
+<span class="nc" id="L258">		final ImageProcessor [] res_ip=new ImageProcessor[nFrames];</span>
+//		final ImageProcessor calc=new ShortProcessor(this.width,this.height);
+	                	
+<span class="nc bnc" id="L261" title="All 2 branches missed.">	    for (int i=0;i&lt;nFrames;i++){</span>
+<span class="nc bnc" id="L262" title="All 2 branches missed.">	    	if (i%(nFrames/20)==0) IJ.showStatus(&quot;Complex conjugate multiply &quot;+i+&quot;/ &quot;+nFrames);</span>
+	                		
+<span class="nc bnc" id="L264" title="All 2 branches missed.">	        if (isStack) ip_time=timeStack.getProcessor(i+1);</span>
+<span class="nc bnc" id="L265" title="All 2 branches missed.">	        if (isTimeGenerator) ip_time=tg.getSlice(i);</span>
+	                		
+<span class="nc" id="L267">	        final ImageProcessor calc=new ImagePlus(&quot;Test&quot;, simpleConvolve()).getProcessor();</span>
+<span class="nc" id="L268">	        calc.multiply(photons);</span>
+	                			                		
+<span class="nc" id="L270">	        calc.setInterpolate(false);</span>
+<span class="nc" id="L271">	        calc.setInterpolationMethod(ImageProcessor.NONE);</span>
+	                		
+<span class="nc" id="L273">	        res_ip[i]=calc.resize(this.width, this.height);</span>
+	                		
+	                		
+<span class="nc" id="L276">	        res_ip[i].setMinAndMax(0, 65532);</span>
+<span class="nc" id="L277">	        res_ip[i]=res_ip[i].convertToShort(true);</span>
+	    }    
+	        
+<span class="nc" id="L280">	    long end=System.currentTimeMillis();    </span>
+<span class="nc" id="L281">		IJ.log(&quot;duration: &quot;+(end-start));</span>
+<span class="nc bnc" id="L282" title="All 2 branches missed.">	    for (int i=0;i&lt;nFrames;i++){</span>
+<span class="nc" id="L283">	        	resultStack.addSlice(res_ip[i]);</span>
+	    }
+<span class="nc" id="L285">	    return new ImagePlus(&quot;Conv&quot;,resultStack); </span>
+			
+	}
+	/**
+	
+	
+	*/
+	FHT simpleConvolve() {
+<span class="nc" id="L293">		FHT h1, h2=null;</span>
+		
+<span class="nc" id="L295">		h1 = new FHT(ip_time);</span>
+<span class="nc" id="L296">		h2 = new FHT(ip_psf);</span>
+			
+<span class="nc bnc" id="L298" title="All 2 branches missed.">		if (!h1.powerOf2Size()) {</span>
+<span class="nc" id="L299">			IJ.error(&quot;FFT Math&quot;, &quot;Images must be a power of 2 size (256x256, 512x512, etc.)&quot;);</span>
+<span class="nc" id="L300">			return null;</span>
+		}
+/*		if (stack.getWidth()!=filter.getWidth()) {
+			IJ.error(&quot;FFT Math&quot;, &quot;Images must be the same size&quot;);
+			return null;
+		}
+*/
+		
+<span class="nc" id="L308">		h1.transform();</span>
+<span class="nc" id="L309">		h2.transform();</span>
+		
+<span class="nc" id="L311">		FHT result=null;</span>
+		
+<span class="nc" id="L313">		result = h1.multiply(h2); </span>
+<span class="nc" id="L314">		result.inverseTransform();</span>
+<span class="nc" id="L315">		result.swapQuadrants();</span>
+<span class="nc" id="L316">		result.resetMinAndMax();</span>
+<span class="nc" id="L317">		return result;</span>
+	}
+	
+	private static FHT convolve(){
+	
+<span class="nc" id="L322">		FHT h1, h2=null;</span>
+	
+<span class="nc" id="L324">		h1 = new FHT(ip_time);</span>
+<span class="nc" id="L325">		h2 = new FHT(ip_psf);</span>
+			
+<span class="nc bnc" id="L327" title="All 2 branches missed.">		if (!h1.powerOf2Size()) {</span>
+<span class="nc" id="L328">			IJ.error(&quot;FFT Math&quot;, &quot;Images must be a power of 2 size (256x256, 512x512, etc.)&quot;);</span>
+<span class="nc" id="L329">			return null;</span>
+		}
+/*		if (stack.getWidth()!=filter.getWidth()) {
+			IJ.error(&quot;FFT Math&quot;, &quot;Images must be the same size&quot;);
+			return null;
+		}
+*/
+		
+<span class="nc" id="L337">		h1.transform();</span>
+<span class="nc" id="L338">		h2.transform();</span>
+		
+<span class="nc" id="L340">		FHT result=null;</span>
+		
+<span class="nc" id="L342">		result = h1.multiply(h2); </span>
+<span class="nc" id="L343">		result.inverseTransform();</span>
+<span class="nc" id="L344">		result.swapQuadrants();</span>
+<span class="nc" id="L345">		result.resetMinAndMax();</span>
+<span class="nc" id="L346">		return result;</span>
+	}
+	
+	
+	 /** Create a Thread[] array as large as the number of processors available. 
+	    * From Stephan Preibisch's Multithreading.java class. See: 
+	    * http://repo.or.cz/w/trakem2.git?a=blob;f=mpi/fruitfly/general/MultiThreading.java;hb=HEAD 
+	    */  
+	    private Thread[] newThreadArray() {  
+<span class="nc" id="L355">	        int n_cpus = Runtime.getRuntime().availableProcessors();  </span>
+<span class="nc" id="L356">	        return new Thread[n_cpus];  </span>
+	    }  
+	  
+	    /** Start all given threads and wait on each of them until all are done. 
+	    * From Stephan Preibisch's Multithreading.java class. See: 
+	    * http://repo.or.cz/w/trakem2.git?a=blob;f=mpi/fruitfly/general/MultiThreading.java;hb=HEAD 
+	    */  
+	    public static void startAndJoin(DiffractionGenerator [] diffArray)  
+	    {  
+<span class="nc bnc" id="L365" title="All 2 branches missed.">	        for (int ithread = 0; ithread &lt; n_cpus; ++ithread)  </span>
+	        {  
+<span class="nc" id="L367">	            diffArray[ithread].setPriority(Thread.NORM_PRIORITY);  </span>
+<span class="nc" id="L368">	            diffArray[ithread].start();  </span>
+	        }  
+	  
+	        try  
+	        {     
+<span class="nc bnc" id="L373" title="All 2 branches missed.">	            for (int ithread = 0; ithread &lt; n_cpus; ++ithread)  </span>
+<span class="nc" id="L374">	                diffArray[ithread].join();  </span>
+<span class="nc" id="L375">	        } catch (InterruptedException ie)  </span>
+	        {  
+<span class="nc" id="L377">	            throw new RuntimeException(ie);  </span>
+	        }  
+<span class="nc" id="L379">	    }</span>
+	    public static ImageStack getResultStack(DiffractionGenerator [] diffArray){
+<span class="nc" id="L381">	    	int w=diffArray[0].width/diffArray[0].scaleFactor;</span>
+<span class="nc" id="L382">	    	int h=diffArray[0].height/diffArray[0].scaleFactor;</span>
+<span class="nc" id="L383">	    	ImageStack stack=new ImageStack(w,h);</span>
+<span class="nc bnc" id="L384" title="All 2 branches missed.">	    	for (int i=0;i&lt;diffArray.length;i++){</span>
+<span class="nc" id="L385">	    		ImageProcessor [] ip=diffArray[i].getResultProcessor();</span>
+<span class="nc bnc" id="L386" title="All 2 branches missed.">	    		for (int j=0;j&lt;ip.length;j++){</span>
+<span class="nc bnc" id="L387" title="All 2 branches missed.">	    			if (ip[j]!=null) stack.addSlice(ip[j]);</span>
+	    		}
+	    	}
+<span class="nc" id="L390">	    	return stack;</span>
+	    }
+	    public DiffractionGenerator [] getArray() {
+<span class="nc" id="L393">			IJ.log(&quot;Start: getArray&quot;);</span>
+<span class="nc" id="L394">	    	DiffractionGenerator array []=new DiffractionGenerator[n_cpus];</span>
+			
+<span class="nc" id="L396">			int stackSize=tg.getStackSize();</span>
+<span class="nc" id="L397">			int [] start=new int [n_cpus];</span>
+<span class="nc" id="L398">			int [] stop=new int[n_cpus];</span>
+			
+<span class="nc" id="L400">			int mod=stackSize % n_cpus;</span>
+<span class="nc" id="L401">			int delta=stackSize/n_cpus;</span>
+			
+//			if (stackSize%n_cpus==0) delta=stackSize/n_cpus;
+//			else delta=(int)Math.round(0.5+((double)stackSize/n_cpus));
+			
+			
+			
+<span class="nc bnc" id="L408" title="All 2 branches missed.">			for (int i=0;i&lt;n_cpus;i++){</span>
+<span class="nc" id="L409">				start[i]=delta*(i);</span>
+<span class="nc" id="L410">				stop[i]=delta*(i+1)-1;</span>
+<span class="nc bnc" id="L411" title="All 2 branches missed.">				if (i&gt;=n_cpus-mod) {</span>
+<span class="nc" id="L412">					start[i]=stop[i-1]+1;</span>
+<span class="nc" id="L413">					stop[i]=start[i]+delta;</span>
+				}
+<span class="nc" id="L415">				IJ.log(&quot;i=&quot;+i+&quot;start=&quot;+start[i]+&quot;   stop&quot;+stop[i]);</span>
+<span class="nc" id="L416">				array[i]=new DiffractionGenerator(this.tg,start[i],stop[i],this.dd);</span>
+<span class="nc" id="L417">				array[i].setPhotons(this.getPhotons());</span>
+			}
+<span class="nc" id="L419">			return array;</span>
+	}
+	public ImageProcessor [] getResultProcessor(){
+<span class="nc" id="L422">		return this.res_ip;</span>
+	}
+}
+		
+		
+    	
+  
+       
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>
