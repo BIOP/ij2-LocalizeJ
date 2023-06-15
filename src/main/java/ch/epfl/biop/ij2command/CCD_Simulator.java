@@ -34,6 +34,9 @@ public class CCD_Simulator extends DetectorSimulator {
 		super(ip,cd.quant,cd.dark,cd.cic,cd.read,cd.exp, cal);
 		this.cd=cd;
 	}
+	public CCD_Simulator() {
+		super();
+	}
 	public ImagePlus run(){
 		int slice=super.getImagePlus().getStackSize();
 		super.setTitle("CCD Camera");

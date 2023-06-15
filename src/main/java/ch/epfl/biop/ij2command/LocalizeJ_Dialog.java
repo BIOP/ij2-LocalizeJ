@@ -5,10 +5,10 @@ import java.io.File;
 import org.scijava.command.Command;
 import org.scijava.plugin.Parameter;
 import org.scijava.plugin.Plugin;
-import net.imagej.ImageJ;
-import ij.IJ;
 
+import ij.IJ;
 import ij.ImagePlus;
+import net.imagej.ImageJ;
 
 /**
  * This example illustrates how to create an ImageJ 2 {@link Command} plugin.
@@ -53,6 +53,9 @@ public class LocalizeJ_Dialog implements Command {
     @Parameter(label="number of frames")
     int frames;
     
+    @Parameter(label="multithreading")
+    boolean multithread;
+    
     @Override
     public void run() {
     	
@@ -81,19 +84,19 @@ public class LocalizeJ_Dialog implements Command {
 		
 		DiffractionGenerator dg=new DiffractionGenerator(time,photons,imp.getProcessor(),new DiffractionDialog());
 //		dg.multiThreadCalculate().show();
-		
+		CCD_Simulator ccd=new CCD_Simulator();
 		if (cd.choice.equals(DetectorSimulator.type[0])){
-//			CCD_Simulator ccd=new CCD_Simulator(dg.multiThreadCalculate(),cd);
-			CCD_Simulator ccd=new CCD_Simulator(dg.calculate(),cd);
+			if (multithread) ccd=new CCD_Simulator(dg.multiThreadCalculate(),cd);
+			else ccd=new CCD_Simulator(dg.calculate(),cd);
 				
 /*			if (saveBlink){
 				IJ.save(ccd.run(),blinkName);
 			} else */ ccd.run().show();
 		}
-		
+		EMCCD_Simulator emccd=new EMCCD_Simulator();
 		if (cd.choice.equals(DetectorSimulator.type[2])){
-//			EMCCD_Simulator emccd=new EMCCD_Simulator(dg.multiThreadCalculate(),cd);
-			EMCCD_Simulator emccd=new EMCCD_Simulator(dg.calculate(),cd);	
+			if (multithread) emccd=new EMCCD_Simulator(dg.multiThreadCalculate(),cd);
+			else emccd=new EMCCD_Simulator(dg.calculate(),cd);	
 /*			if (saveBlink){
 				IJ.save(emccd.run(),blinkName);
 			} else */ emccd.run().show();

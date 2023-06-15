@@ -196,5 +196,22 @@
 			<artifactId>junit</artifactId>
 			<scope>test</scope>
 		</dependency>
+		<dependency>
+  			<groupId>sc.fiji</groupId>
+  			<artifactId>imagescience</artifactId>
+  			<version>3.0.0</version>
+		</dependency>
+		<dependency>
+    		<groupId>colt</groupId>
+    		<artifactId>colt</artifactId>
+    		<version>1.2.0</version>
+		</dependency>
+		<dependency>
+  			<groupId>net.imagej</groupId>
+  			<artifactId>imagej-maven-plugin</artifactId>
+  			<version>0.7.1</version>
+		</dependency>
 	</dependencies>
+	
+	
 </project>

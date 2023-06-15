@@ -33,6 +33,10 @@ public class EMCCD_Simulator extends DetectorSimulator {
 	public EMCCD_Simulator(ImageProcessor ip, double quantumEff,Calibration cal){
 			super(ip,quantumEff,cal);
 	}
+	public EMCCD_Simulator() {
+		// TODO Auto-generated constructor stub
+	}
+
 	public ImagePlus run(){
 		int slice=super.getImagePlus().getStackSize();
 		super.setTitle("EM CCD Camera");

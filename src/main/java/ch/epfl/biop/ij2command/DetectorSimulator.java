@@ -121,6 +121,9 @@ public abstract class DetectorSimulator {
 	 * Initialization routines
 	 *===============================================================================================*/
 
+	public DetectorSimulator() {
+		// TODO Auto-generated constructor stub
+	}
 	private void initCalibrationDialog(){
 		GenericDialog gd=new GenericDialog("Camera Parameters");
 		gd.addNumericField("Pixel size in um  :", 6.5, 1);
