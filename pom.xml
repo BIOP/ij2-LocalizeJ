@@ -74,20 +74,7 @@
 				<role>maintainer</role>
 			</roles>
 		</developer>
-		<developer>
-			<id>stoffelc</id>
-			<name>Claire Stoffel</name>
-			<url>https://www.epfl.ch/research/facilities/ptbiop/staff/</url>
-			<roles>
-				<role>founder</role>
-				<role>lead</role>
-				<role>developer</role>
-				<role>debugger</role>
-				<role>reviewer</role>
-				<role>support</role>
-				<role>maintainer</role>
-			</roles>
-		</developer>
+		
 		<developer>
 			<id>RDornier</id>
 			<name>Rémy Dornier</name>
@@ -184,8 +171,7 @@
 	<dependencies>
 		<dependency>
 			<groupId>net.imagej</groupId>
-			<artifactId>ij</artifactId>
-			<version>1.54d</version>
+			<artifactId>imagej</artifactId>
 		</dependency>
 		<dependency>
 			<groupId>net.imagej</groupId>
@@ -206,11 +192,7 @@
     		<artifactId>colt</artifactId>
     		<version>1.2.0</version>
 		</dependency>
-		<dependency>
-  			<groupId>net.imagej</groupId>
-  			<artifactId>imagej-maven-plugin</artifactId>
-  			<version>0.7.1</version>
-		</dependency>
+		
 	</dependencies>
 	
 	

@@ -5,10 +5,10 @@ import java.io.File;
 import org.scijava.command.Command;
 import org.scijava.plugin.Parameter;
 import org.scijava.plugin.Plugin;
-import net.imagej.ImageJ;
-import ij.IJ;
 
+import ij.IJ;
 import ij.ImagePlus;
+import net.imagej.ImageJ;
 
 /**
  * This example illustrates how to create an ImageJ 2 {@link Command} plugin.
@@ -53,54 +53,57 @@ import ij.ImagePlus;
     @Parameter(label=&quot;number of frames&quot;)
     int frames;
     
+    @Parameter(label=&quot;multithreading&quot;)
+    boolean multithread;
+    
     @Override
     public void run() {
     	
-<span class="nc" id="L59">    	IJ.log(&quot;Please specify the Camera Parameters&quot;);</span>
-<span class="nc" id="L60">		CameraDialog cd=new CameraDialog();</span>
-<span class="nc" id="L61">		cd.showDialog();</span>
+<span class="nc" id="L62">    	IJ.log(&quot;Please specify the Camera Parameters&quot;);</span>
+<span class="nc" id="L63">		CameraDialog cd=new CameraDialog();</span>
+<span class="nc" id="L64">		cd.showDialog();</span>
 		
-<span class="nc" id="L63">    	TimeGenerator time=new TimeGenerator(1024,1024);</span>
-<span class="nc" id="L64">		time.setParticleNumber(numMol);</span>
-<span class="nc" id="L65">		time.setFrameNumber(frames);</span>
-<span class="nc" id="L66">		time.setOnRate(kon);</span>
-<span class="nc" id="L67">		time.setOffRate(koff);</span>
-<span class="nc" id="L68">		time.setBleachRate(bleach); </span>
-<span class="nc" id="L69">		time.generateMask(pattern.getAbsolutePath());</span>
+<span class="nc" id="L66">    	TimeGenerator time=new TimeGenerator(1024,1024);</span>
+<span class="nc" id="L67">		time.setParticleNumber(numMol);</span>
+<span class="nc" id="L68">		time.setFrameNumber(frames);</span>
+<span class="nc" id="L69">		time.setOnRate(kon);</span>
+<span class="nc" id="L70">		time.setOffRate(koff);</span>
+<span class="nc" id="L71">		time.setBleachRate(bleach); </span>
+<span class="nc" id="L72">		time.generateMask(pattern.getAbsolutePath());</span>
     	
-<span class="nc" id="L71">		time.heavyTimeTrace();</span>
+<span class="nc" id="L74">		time.heavyTimeTrace();</span>
 /*		if (saveTime){
 			IJ.save(new ImagePlus(&quot;TimeTrace condensed&quot;,time.condensedTimeTrace()),timeName);
 		}
 		
 		if (project) time.getProjectedTimeTrace().show();
 */		
-<span class="nc" id="L78">		ImagePlus imp=IJ.openImage(psf.getAbsolutePath());</span>
+<span class="nc" id="L81">		ImagePlus imp=IJ.openImage(psf.getAbsolutePath());</span>
 //		IJ.open(psf.getAbsolutePath());
 //		ImagePlus imp=WindowManager.getCurrentImage();
 		
-<span class="nc" id="L82">		DiffractionGenerator dg=new DiffractionGenerator(time,photons,imp.getProcessor(),new DiffractionDialog());</span>
+<span class="nc" id="L85">		DiffractionGenerator dg=new DiffractionGenerator(time,photons,imp.getProcessor(),new DiffractionDialog());</span>
 //		dg.multiThreadCalculate().show();
-		
-<span class="nc bnc" id="L85" title="All 2 branches missed.">		if (cd.choice.equals(DetectorSimulator.type[0])){</span>
-//			CCD_Simulator ccd=new CCD_Simulator(dg.multiThreadCalculate(),cd);
-<span class="nc" id="L87">			CCD_Simulator ccd=new CCD_Simulator(dg.calculate(),cd);</span>
+<span class="nc" id="L87">		CCD_Simulator ccd=new CCD_Simulator();</span>
+<span class="nc bnc" id="L88" title="All 2 branches missed.">		if (cd.choice.equals(DetectorSimulator.type[0])){</span>
+<span class="nc bnc" id="L89" title="All 2 branches missed.">			if (multithread) ccd=new CCD_Simulator(dg.multiThreadCalculate(),cd);</span>
+<span class="nc" id="L90">			else ccd=new CCD_Simulator(dg.calculate(),cd);</span>
 				
 /*			if (saveBlink){
 				IJ.save(ccd.run(),blinkName);
-<span class="nc" id="L91">			} else */ ccd.run().show();</span>
+<span class="nc" id="L94">			} else */ ccd.run().show();</span>
 		}
-		
-<span class="nc bnc" id="L94" title="All 2 branches missed.">		if (cd.choice.equals(DetectorSimulator.type[2])){</span>
-//			EMCCD_Simulator emccd=new EMCCD_Simulator(dg.multiThreadCalculate(),cd);
-<span class="nc" id="L96">			EMCCD_Simulator emccd=new EMCCD_Simulator(dg.calculate(),cd);	</span>
+<span class="nc" id="L96">		EMCCD_Simulator emccd=new EMCCD_Simulator();</span>
+<span class="nc bnc" id="L97" title="All 2 branches missed.">		if (cd.choice.equals(DetectorSimulator.type[2])){</span>
+<span class="nc bnc" id="L98" title="All 2 branches missed.">			if (multithread) emccd=new EMCCD_Simulator(dg.multiThreadCalculate(),cd);</span>
+<span class="nc" id="L99">			else emccd=new EMCCD_Simulator(dg.calculate(),cd);	</span>
 /*			if (saveBlink){
 				IJ.save(emccd.run(),blinkName);
-<span class="nc" id="L99">			} else */ emccd.run().show();</span>
+<span class="nc" id="L102">			} else */ emccd.run().show();</span>
 		}
     	    	
     	
-<span class="nc" id="L103">    }</span>
+<span class="nc" id="L106">    }</span>
 
     /**
      * This main function serves for development purposes.
@@ -112,11 +115,11 @@ import ij.ImagePlus;
      */
     public static void main(final String... args) throws Exception {
         // create the ImageJ application context with all available services
-<span class="nc" id="L115">        final ImageJ ij = new ImageJ();</span>
-<span class="nc" id="L116">        ij.ui().showUI();</span>
+<span class="nc" id="L118">        final ImageJ ij = new ImageJ();</span>
+<span class="nc" id="L119">        ij.ui().showUI();</span>
 
-<span class="nc" id="L118">        ij.command().run(LocalizeJ_Dialog.class, true);</span>
-<span class="nc" id="L119">    }</span>
+<span class="nc" id="L121">        ij.command().run(LocalizeJ_Dialog.class, true);</span>
+<span class="nc" id="L122">    }</span>
 }
 
 
