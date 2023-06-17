@@ -15,65 +15,77 @@ public class EMCCD_Simulator extends DetectorSimulator {
 <span class="nc" id="L15">		super(pixelSize,exposureTime,quantumEff/2, ip);</span>
 		
 <span class="nc" id="L17">	}</span>
-		
+	public EMCCD_Simulator(double gain){
+<span class="nc" id="L19">		super(0.46,0.001,0.0018,0.105*gain,10);</span>
+<span class="nc" id="L20">		this.gainfactor=gain;</span>
+<span class="nc" id="L21">	}	</span>
 	public EMCCD_Simulator(ImagePlus imp, double gain){
-<span class="nc" id="L20">		super(imp,0.46,0.001,0.0018,0.105*gain,10);</span>
-<span class="nc" id="L21">		this.gainfactor=gain;</span>
-<span class="nc" id="L22">	}</span>
+<span class="nc" id="L23">		super(imp,0.46,0.001,0.0018,0.105*gain,10);</span>
+<span class="nc" id="L24">		this.gainfactor=gain;</span>
+<span class="nc" id="L25">	}</span>
 	public EMCCD_Simulator(ImagePlus imp, double quant, double dark, double cic, double read, double exp, double gain){
-<span class="nc" id="L24">		super(imp,quant/2,dark,cic,read*gain,exp);</span>
-<span class="nc" id="L25">		this.gainfactor=gain;</span>
-<span class="nc" id="L26">	}</span>
+<span class="nc" id="L27">		super(imp,quant/2,dark,cic,read*gain,exp);</span>
+<span class="nc" id="L28">		this.gainfactor=gain;</span>
+<span class="nc" id="L29">	}</span>
 	
 	public EMCCD_Simulator(ImagePlus imp, CameraDialog cd){
-<span class="nc" id="L29">		super(imp,cd.quant/2,cd.dark,cd.cic,cd.read*cd.emGain,cd.exp);</span>
-<span class="nc" id="L30">		this.gainfactor=cd.emGain;</span>
-<span class="nc" id="L31">	}</span>
+<span class="nc" id="L32">		super(imp,cd.quant/2,cd.dark,cd.cic,cd.read*cd.emGain,cd.exp);</span>
+<span class="nc" id="L33">		this.gainfactor=cd.emGain;</span>
+<span class="nc" id="L34">	}</span>
 	
 	public EMCCD_Simulator(ImageProcessor ip, double quantumEff,Calibration cal){
-<span class="nc" id="L34">			super(ip,quantumEff,cal);</span>
-<span class="nc" id="L35">	}</span>
-<span class="nc" id="L36">	public EMCCD_Simulator() {</span>
-		// TODO Auto-generated constructor stub
+<span class="nc" id="L37">			super(ip,quantumEff,cal);</span>
 <span class="nc" id="L38">	}</span>
+<span class="nc" id="L39">	public EMCCD_Simulator() {</span>
+		// TODO Auto-generated constructor stub
+<span class="nc" id="L41">	}</span>
+
+<span class="nc" id="L43">	public EMCCD_Simulator(ImagePlus multiThreadCalculate, EMCCD_Simulator emccd) {</span>
+		
+<span class="nc" id="L45">	}</span>
 
 	public ImagePlus run(){
-<span class="nc" id="L41">		int slice=super.getImagePlus().getStackSize();</span>
-<span class="nc" id="L42">		super.setTitle(&quot;EM CCD Camera&quot;);</span>
-<span class="nc bnc" id="L43" title="All 2 branches missed.">		if (slice==1){</span>
-<span class="nc" id="L44">			this.setImageProcessor(this.PoissonNoise());</span>
-<span class="nc" id="L45">			this.setImageProcessor(this.Bimodal());</span>
-<span class="nc" id="L46">			this.setImageProcessor(this.EMGain(gainfactor));</span>
-<span class="nc" id="L47">			this.setImageProcessor(this.ReadNoise());</span>
-<span class="nc" id="L48">			this.cam_imp.setProcessor(this.cam_ip);</span>
-<span class="nc" id="L49">		}</span>
-		else {
+		
+<span class="nc" id="L49">		super.setTitle(&quot;EM CCD Camera&quot;);</span>
+		
+<span class="nc" id="L51">		this.setImageProcessor(this.PoissonNoise());</span>
+<span class="nc" id="L52">		this.setImageProcessor(this.Bimodal());</span>
+<span class="nc" id="L53">		this.setImageProcessor(this.EMGain(gainfactor));</span>
+<span class="nc" id="L54">		this.setImageProcessor(this.ReadNoise());</span>
+<span class="nc bnc" id="L55" title="All 2 branches missed.">		if (cam_imp==null) cam_imp=new ImagePlus(this.getTitle(),this.cam_ip);</span>
+<span class="nc" id="L56">		else this.cam_imp.setProcessor(this.cam_ip);</span>
+		
+<span class="nc" id="L58">		return this.getImagePlus();</span>
+		
+	}
+	public ImagePlus run(ImagePlus imp) {
+//		imp.show();
+<span class="nc" id="L63">		int slice=imp.getStackSize();</span>
+<span class="nc" id="L64">		ImageStack stack=imp.createEmptyStack();</span>
 			
-<span class="nc" id="L52">			ImageStack stack=this.getImagePlus().createEmptyStack();</span>
-			
-<span class="nc bnc" id="L54" title="All 2 branches missed.">			for (int i=1;i&lt;=slice;i++){</span>
-<span class="nc" id="L55">				IJ.showProgress(i/slice);</span>
+<span class="nc bnc" id="L66" title="All 2 branches missed.">		for (int i=1;i&lt;=slice;i++){</span>
+<span class="nc" id="L67">			IJ.showProgress(i/slice);</span>
 				
-<span class="nc" id="L57">				this.getImagePlus().setSliceWithoutUpdate(i);</span>
-<span class="nc" id="L58">				EMCCD_Simulator ccd=new EMCCD_Simulator(this.getProcessor().duplicate(),this.getQuantumEff(),this.getCalibration());</span>
+<span class="nc" id="L69">			imp.setSliceWithoutUpdate(i);</span>
+<span class="nc" id="L70">			this.setImageProcessor(imp.getProcessor());</span>
 
-<span class="nc" id="L60">					ccd.run();</span>
-<span class="nc" id="L61">					stack.addSlice(ccd.getProcessor());</span>
+<span class="nc" id="L72">			this.run();</span>
+<span class="nc" id="L73">			stack.addSlice(this.getProcessor());</span>
+<span class="nc" id="L74">			this.reset();</span>
 
-			}
-<span class="nc" id="L64">			this.setImagePlus(stack);</span>
 		}
-<span class="nc" id="L66">		return this.getImagePlus();</span>
+<span class="nc" id="L77">		this.setImagePlus(stack);</span>
+<span class="nc" id="L78">		return this.getImagePlus();</span>
 	}
 	
 	ImagePlus resultStack(){
 		 
-<span class="nc" id="L71">		 ImageStack stack=new ImageStack(super.getWidth(),super.getHeight());</span>
-<span class="nc" id="L72">		 stack.addSlice(this.getImagePlus().getProcessor().duplicate().convertToFloat());</span>
-<span class="nc" id="L73">		 stack.addSlice(this.PoissonNoise().duplicate().convertToFloat());</span>
-<span class="nc" id="L74">		 stack.addSlice(this.Bimodal().duplicate());</span>
+<span class="nc" id="L83">		 ImageStack stack=new ImageStack(super.getWidth(),super.getHeight());</span>
+<span class="nc" id="L84">		 stack.addSlice(this.getImagePlus().getProcessor().duplicate().convertToFloat());</span>
+<span class="nc" id="L85">		 stack.addSlice(this.PoissonNoise().duplicate().convertToFloat());</span>
+<span class="nc" id="L86">		 stack.addSlice(this.Bimodal().duplicate());</span>
 		 
-<span class="nc" id="L76">		 return new ImagePlus(&quot;Noise stack&quot;,stack);</span>
+<span class="nc" id="L88">		 return new ImagePlus(&quot;Noise stack&quot;,stack);</span>
 	 }
 	
 }

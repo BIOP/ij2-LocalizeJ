@@ -86,7 +86,7 @@ public class LocalizeJ_Dialog implements Command {
 		
 		if (camera.equals(DetectorSimulator.type[0])){
 			CCD_Simulator ccd=new CCD_Simulator();
-			if (multithread) ccd=new CCD_Simulator(dg.multiThreadCalculate(),ccd);
+			if (multithread) ccd.run(dg.multiThreadCalculate()).show();
 			else ccd.run(dg.calculate()).show();
 				
 /*			if (saveBlink){
@@ -95,8 +95,8 @@ public class LocalizeJ_Dialog implements Command {
 		}
 		
 		if (camera.equals(DetectorSimulator.type[2])){
-			EMCCD_Simulator emccd=new EMCCD_Simulator();
-			if (multithread) emccd=new EMCCD_Simulator(dg.multiThreadCalculate(),emccd);
+			EMCCD_Simulator emccd=new EMCCD_Simulator(10);
+			if (multithread) emccd.run(dg.multiThreadCalculate()).show();
 			else emccd.run(dg.calculate()).show();	
 /*			if (saveBlink){
 				IJ.save(emccd.run(),blinkName);

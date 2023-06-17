@@ -58,22 +58,22 @@ public class CCD_Simulator extends DetectorSimulator {
 		int slice=imp.getStackSize();
 		ImageStack stack=imp.createEmptyStack();
 
-			for (int i=1;i<=slice;i++){
-				IJ.showProgress(i/slice);
-				
-				imp.setSliceWithoutUpdate(i);
-				this.setImageProcessor(imp.getProcessor());
-				
+		for (int i=1;i<=slice;i++){
+			IJ.showProgress(i/slice);
+			
+			imp.setSliceWithoutUpdate(i);
+			this.setImageProcessor(imp.getProcessor());
+			
 
-					this.run();
-					stack.addSlice(this.getProcessor());
-					this.reset();
-//					ImagePlus test=new ImagePlus("test",stack);
-//					test.show();
+			this.run();
+			stack.addSlice(this.getProcessor());
+			this.reset();
+//				ImagePlus test=new ImagePlus("test",stack);
+//				test.show();
 
-			}
-			this.setImagePlus(stack);
+		}
 		
+		this.setImagePlus(stack);
 		return this.getImagePlus();
 	}
 	

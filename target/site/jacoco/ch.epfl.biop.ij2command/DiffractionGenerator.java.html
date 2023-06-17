@@ -65,7 +65,7 @@ public class DiffractionGenerator extends Thread {
 <span class="nc bnc" id="L65" title="All 2 branches missed.">		if (!tg.isCondensed()) return;</span>
 //		BesselWindow bw=new BesselWindow(tg.getWidth(),tg.getHeight(),dd.pixel,dd.wave,dd.na);
 <span class="nc" id="L67">		ip_psf=psf.convertToFloat();</span>
-<span class="nc" id="L68">		IJ.log(&quot;Diff Generator: check&quot;);</span>
+//		IJ.log(&quot;Diff Generator: check&quot;);
 		
 <span class="nc" id="L70">	}</span>
 	
@@ -175,7 +175,7 @@ public class DiffractionGenerator extends Thread {
 	
 	ImagePlus multiThreadCalculate(){
 		
-<span class="nc" id="L178">		IJ.log(&quot;Start multiThread&quot;);</span>
+//		IJ.log(&quot;Start multiThread&quot;);
 <span class="nc" id="L179">		long start=System.currentTimeMillis();</span>
 		
 <span class="nc" id="L181">		this.width=tg.getWidth();</span>
@@ -183,7 +183,7 @@ public class DiffractionGenerator extends Thread {
 		
 <span class="nc" id="L184">		final DiffractionGenerator [] calculate = new DiffractionGenerator(this.tg,this.getPhotons(),this.dd).getArray(); </span>
 <span class="nc" id="L185">		final ImageStack resultStack=new ImageStack(this.width/scaleFactor,this.height/scaleFactor);  </span>
-<span class="nc" id="L186">		IJ.log(&quot;startAndJoin&quot;);</span>
+//		IJ.log(&quot;startAndJoin&quot;);
 <span class="nc" id="L187">		startAndJoin(calculate);</span>
 		
 <span class="nc" id="L189">		long end=System.currentTimeMillis();    </span>
@@ -278,7 +278,7 @@ public class DiffractionGenerator extends Thread {
 	    }    
 	        
 <span class="nc" id="L280">	    long end=System.currentTimeMillis();    </span>
-<span class="nc" id="L281">		IJ.log(&quot;duration: &quot;+(end-start));</span>
+<span class="nc" id="L281">		IJ.log(&quot;duration: &quot;+(end-start)/1000);</span>
 <span class="nc bnc" id="L282" title="All 2 branches missed.">	    for (int i=0;i&lt;nFrames;i++){</span>
 <span class="nc" id="L283">	        	resultStack.addSlice(res_ip[i]);</span>
 	    }
@@ -390,7 +390,7 @@ public class DiffractionGenerator extends Thread {
 <span class="nc" id="L390">	    	return stack;</span>
 	    }
 	    public DiffractionGenerator [] getArray() {
-<span class="nc" id="L393">			IJ.log(&quot;Start: getArray&quot;);</span>
+//			IJ.log(&quot;Start: getArray&quot;);
 <span class="nc" id="L394">	    	DiffractionGenerator array []=new DiffractionGenerator[n_cpus];</span>
 			
 <span class="nc" id="L396">			int stackSize=tg.getStackSize();</span>
@@ -412,7 +412,7 @@ public class DiffractionGenerator extends Thread {
 <span class="nc" id="L412">					start[i]=stop[i-1]+1;</span>
 <span class="nc" id="L413">					stop[i]=start[i]+delta;</span>
 				}
-<span class="nc" id="L415">				IJ.log(&quot;i=&quot;+i+&quot;start=&quot;+start[i]+&quot;   stop&quot;+stop[i]);</span>
+//				IJ.log(&quot;i=&quot;+i+&quot;start=&quot;+start[i]+&quot;   stop&quot;+stop[i]);
 <span class="nc" id="L416">				array[i]=new DiffractionGenerator(this.tg,start[i],stop[i],this.dd);</span>
 <span class="nc" id="L417">				array[i].setPhotons(this.getPhotons());</span>
 			}

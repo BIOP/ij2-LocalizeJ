@@ -59,6 +59,7 @@ public class EMCCD_Simulator extends DetectorSimulator {
 		
 	}
 	public ImagePlus run(ImagePlus imp) {
+//		imp.show();
 		int slice=imp.getStackSize();
 		ImageStack stack=imp.createEmptyStack();
 			
@@ -70,6 +71,7 @@ public class EMCCD_Simulator extends DetectorSimulator {
 
 			this.run();
 			stack.addSlice(this.getProcessor());
+			this.reset();
 
 		}
 		this.setImagePlus(stack);

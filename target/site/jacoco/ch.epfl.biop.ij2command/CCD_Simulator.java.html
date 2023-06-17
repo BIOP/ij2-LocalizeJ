@@ -18,63 +18,73 @@ public class CCD_Simulator extends DetectorSimulator {
 	public CCD_Simulator(ImagePlus imp){
 <span class="nc" id="L19">		super(imp,0.7,0.0005,0.001,6,10);</span>
 <span class="nc" id="L20">	}</span>
+	public CCD_Simulator(){
+<span class="nc" id="L22">		super(0.7,0.0005,0.001,6,10);</span>
+<span class="nc" id="L23">	}</span>
 	
 	public CCD_Simulator(ImagePlus imp, double quant, double dark, double cic, double read, double exp){
-<span class="nc" id="L23">		super(imp,quant,dark,cic,read,exp);</span>
-<span class="nc" id="L24">	}</span>
+<span class="nc" id="L26">		super(imp,quant,dark,cic,read,exp);</span>
+<span class="nc" id="L27">	}</span>
 	
 	
 	public CCD_Simulator(ImagePlus imp,CameraDialog cd){
-<span class="nc" id="L28">		super(imp,cd.quant,cd.dark,cd.cic,cd.read,cd.exp);</span>
-<span class="nc" id="L29">		this.cd=cd;</span>
+<span class="nc" id="L31">		super(imp,cd.quant,cd.dark,cd.cic,cd.read,cd.exp);</span>
+<span class="nc" id="L32">		this.cd=cd;</span>
 		
-<span class="nc" id="L31">	}</span>
+<span class="nc" id="L34">	}</span>
 	
 	public CCD_Simulator(ImageProcessor ip, CameraDialog cd,Calibration cal){
-<span class="nc" id="L34">		super(ip,cd.quant,cd.dark,cd.cic,cd.read,cd.exp, cal);</span>
-<span class="nc" id="L35">		this.cd=cd;</span>
-<span class="nc" id="L36">	}</span>
-	public CCD_Simulator() {
-<span class="nc" id="L38">		super();</span>
+<span class="nc" id="L37">		super(ip,cd.quant,cd.dark,cd.cic,cd.read,cd.exp, cal);</span>
+<span class="nc" id="L38">		this.cd=cd;</span>
 <span class="nc" id="L39">	}</span>
+	
+<span class="nc" id="L41">	public CCD_Simulator(ImagePlus multiThreadCalculate, CCD_Simulator ccd) {</span>
+		
+<span class="nc" id="L43">	}</span>
 	public ImagePlus run(){
-<span class="nc" id="L41">		int slice=super.getImagePlus().getStackSize();</span>
-<span class="nc" id="L42">		super.setTitle(&quot;CCD Camera&quot;);</span>
-<span class="nc bnc" id="L43" title="All 2 branches missed.">		if (slice==1){</span>
-<span class="nc" id="L44">			this.setImageProcessor(this.PoissonNoise());</span>
-<span class="nc" id="L45">			this.setImageProcessor(this.Bimodal());</span>
-<span class="nc" id="L46">			this.setImageProcessor(this.ReadNoise());</span>
-<span class="nc" id="L47">			this.cam_imp.setProcessor(this.cam_ip);</span>
-<span class="nc" id="L48">		}</span>
-		else {
+		
+<span class="nc" id="L46">		super.setTitle(&quot;CCD Camera&quot;);</span>
+		
+<span class="nc" id="L48">			this.setImageProcessor(this.PoissonNoise());</span>
+<span class="nc" id="L49">			this.setImageProcessor(this.Bimodal());</span>
+<span class="nc" id="L50">			this.setImageProcessor(this.ReadNoise());</span>
+<span class="nc bnc" id="L51" title="All 2 branches missed.">			if (cam_imp==null) cam_imp=new ImagePlus(this.getTitle(),this.cam_ip); </span>
+<span class="nc" id="L52">			else this.cam_imp.setProcessor(this.cam_ip);</span>
+		
+<span class="nc" id="L54">		return this.getImagePlus();</span>
+	}
+	
+	public ImagePlus run(ImagePlus imp) {
+<span class="nc" id="L58">		int slice=imp.getStackSize();</span>
+<span class="nc" id="L59">		ImageStack stack=imp.createEmptyStack();</span>
+
+<span class="nc bnc" id="L61" title="All 2 branches missed.">		for (int i=1;i&lt;=slice;i++){</span>
+<span class="nc" id="L62">			IJ.showProgress(i/slice);</span>
 			
-<span class="nc" id="L51">			ImageStack stack=this.getImagePlus().createEmptyStack();</span>
+<span class="nc" id="L64">			imp.setSliceWithoutUpdate(i);</span>
+<span class="nc" id="L65">			this.setImageProcessor(imp.getProcessor());</span>
+			
 
-<span class="nc bnc" id="L53" title="All 2 branches missed.">			for (int i=1;i&lt;=slice;i++){</span>
-<span class="nc" id="L54">				IJ.showProgress(i/slice);</span>
-				
-<span class="nc" id="L56">				this.getImagePlus().setSliceWithoutUpdate(i);</span>
-<span class="nc" id="L57">				CCD_Simulator ccd=new CCD_Simulator(this.getProcessor().duplicate(),this.cd,this.getCalibration());</span>
+<span class="nc" id="L68">			this.run();</span>
+<span class="nc" id="L69">			stack.addSlice(this.getProcessor());</span>
+<span class="nc" id="L70">			this.reset();</span>
+//				ImagePlus test=new ImagePlus(&quot;test&quot;,stack);
+//				test.show();
 
-<span class="nc" id="L59">					ccd.run();</span>
-<span class="nc" id="L60">					stack.addSlice(ccd.getProcessor());</span>
-//					ImagePlus test=new ImagePlus(&quot;test&quot;,stack);
-//					test.show();
-
-			}
-<span class="nc" id="L65">			this.setImagePlus(stack);</span>
 		}
-<span class="nc" id="L67">		return this.getImagePlus();</span>
+		
+<span class="nc" id="L76">		this.setImagePlus(stack);</span>
+<span class="nc" id="L77">		return this.getImagePlus();</span>
 	}
 	
 	ImagePlus resultStack(){
 		 
-<span class="nc" id="L72">		 ImageStack stack=new ImageStack(super.getWidth(),super.getHeight());</span>
-<span class="nc" id="L73">		 stack.addSlice(this.getImagePlus().getProcessor().duplicate().convertToFloat());</span>
-<span class="nc" id="L74">		 stack.addSlice(this.PoissonNoise().duplicate().convertToFloat());</span>
-<span class="nc" id="L75">		 stack.addSlice(this.Bimodal().duplicate());</span>
+<span class="nc" id="L82">		 ImageStack stack=new ImageStack(super.getWidth(),super.getHeight());</span>
+<span class="nc" id="L83">		 stack.addSlice(this.getImagePlus().getProcessor().duplicate().convertToFloat());</span>
+<span class="nc" id="L84">		 stack.addSlice(this.PoissonNoise().duplicate().convertToFloat());</span>
+<span class="nc" id="L85">		 stack.addSlice(this.Bimodal().duplicate());</span>
 		 
-<span class="nc" id="L77">		 return new ImagePlus(&quot;Noise stack&quot;,stack);</span>
+<span class="nc" id="L87">		 return new ImagePlus(&quot;Noise stack&quot;,stack);</span>
 	 }
 	
 }
