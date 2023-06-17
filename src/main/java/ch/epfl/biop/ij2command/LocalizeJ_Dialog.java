@@ -44,25 +44,24 @@ public class LocalizeJ_Dialog implements Command {
     
 //    @Parameter
 //    int band;
-    @Parameter(label="number of photons/molecule")
+    @Parameter(label="photoflux in photons/molecule")
     int photons;
     
-    @Parameter(label="number of molecules")
+    @Parameter(label="# of molecules")
     int numMol;
     
-    @Parameter(label="number of frames")
+    @Parameter(label="# of frames")
     int frames;
     
     @Parameter(label="multithreading")
     boolean multithread;
     
+    @Parameter (choices={"CCD camera", "EM CCD camera","sCMOS camera"}, style="listBox") 
+    String camera;
+    
     @Override
     public void run() {
     	
-    	IJ.log("Please specify the Camera Parameters");
-		CameraDialog cd=new CameraDialog();
-		cd.showDialog();
-		
     	TimeGenerator time=new TimeGenerator(1024,1024);
 		time.setParticleNumber(numMol);
 		time.setFrameNumber(frames);
@@ -84,19 +83,21 @@ public class LocalizeJ_Dialog implements Command {
 		
 		DiffractionGenerator dg=new DiffractionGenerator(time,photons,imp.getProcessor(),new DiffractionDialog());
 //		dg.multiThreadCalculate().show();
-		CCD_Simulator ccd=new CCD_Simulator();
-		if (cd.choice.equals(DetectorSimulator.type[0])){
-			if (multithread) ccd=new CCD_Simulator(dg.multiThreadCalculate(),cd);
-			else ccd=new CCD_Simulator(dg.calculate(),cd);
+		
+		if (camera.equals(DetectorSimulator.type[0])){
+			CCD_Simulator ccd=new CCD_Simulator();
+			if (multithread) ccd=new CCD_Simulator(dg.multiThreadCalculate(),ccd);
+			else ccd.run(dg.calculate()).show();
 				
 /*			if (saveBlink){
 				IJ.save(ccd.run(),blinkName);
 			} else */ ccd.run().show();
 		}
-		EMCCD_Simulator emccd=new EMCCD_Simulator();
-		if (cd.choice.equals(DetectorSimulator.type[2])){
-			if (multithread) emccd=new EMCCD_Simulator(dg.multiThreadCalculate(),cd);
-			else emccd=new EMCCD_Simulator(dg.calculate(),cd);	
+		
+		if (camera.equals(DetectorSimulator.type[2])){
+			EMCCD_Simulator emccd=new EMCCD_Simulator();
+			if (multithread) emccd=new EMCCD_Simulator(dg.multiThreadCalculate(),emccd);
+			else emccd.run(dg.calculate()).show();	
 /*			if (saveBlink){
 				IJ.save(emccd.run(),blinkName);
 			} else */ emccd.run().show();

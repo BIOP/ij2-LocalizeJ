@@ -18,7 +18,7 @@ import imagescience.random.RandomGenerator;
 
 public abstract class DetectorSimulator {
 
-	final static String []type={"CCD camera","sCMOS","EM CCD"};
+	final static String []type={"CCD camera","sCMOS camera","EM CCD camera"};
 	private double pixelSize;						//pixel size of the camera chip in um
 	private double exp;					//exposure time of the camera
 	private double quant;				//Quantum efficiency of the camera chip
@@ -51,6 +51,14 @@ public abstract class DetectorSimulator {
 		this.cam_ip=new ShortProcessor(ip.getWidth(),ip.getHeight());
 		this.initCalibration();
 	}
+	protected DetectorSimulator(double quant, double dark, double cic, double read, double exp){
+		this.quant=quant;
+		this.dark=dark;
+		this.cic=cic;
+		this.read=read;
+		this.exp=exp;
+	}
+	
 	protected DetectorSimulator(ImagePlus imp,double quant, double dark, double cic, double read, double exp){
 		this.quant=quant;
 		this.dark=dark;
@@ -169,6 +177,7 @@ public abstract class DetectorSimulator {
 	
 	public ImagePlus getImagePlus(){
 		
+		if (cam_imp==null) cam_imp=new ImagePlus (getTitle(),cam_ip);
 //		cam_imp.setProcessor(cam_ip);
 		return this.cam_imp;
 	}
@@ -213,7 +222,7 @@ public abstract class DetectorSimulator {
 	
 	public void setTitle(String title){
 		this.title=title;
-		this.cam_imp.setTitle(title);
+		if (this.cam_imp!=null) this.cam_imp.setTitle(title);
 	}
 	
 	

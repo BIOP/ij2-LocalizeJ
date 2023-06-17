@@ -65,7 +65,7 @@ public class DiffractionGenerator extends Thread {
 		if (!tg.isCondensed()) return;
 //		BesselWindow bw=new BesselWindow(tg.getWidth(),tg.getHeight(),dd.pixel,dd.wave,dd.na);
 		ip_psf=psf.convertToFloat();
-		IJ.log("Diff Generator: check");
+//		IJ.log("Diff Generator: check");
 		
 	}
 	
@@ -175,7 +175,7 @@ public class DiffractionGenerator extends Thread {
 	
 	ImagePlus multiThreadCalculate(){
 		
-		IJ.log("Start multiThread");
+//		IJ.log("Start multiThread");
 		long start=System.currentTimeMillis();
 		
 		this.width=tg.getWidth();
@@ -183,7 +183,7 @@ public class DiffractionGenerator extends Thread {
 		
 		final DiffractionGenerator [] calculate = new DiffractionGenerator(this.tg,this.getPhotons(),this.dd).getArray(); 
 		final ImageStack resultStack=new ImageStack(this.width/scaleFactor,this.height/scaleFactor);  
-		IJ.log("startAndJoin");
+//		IJ.log("startAndJoin");
 		startAndJoin(calculate);
 		
 		long end=System.currentTimeMillis();    
@@ -278,7 +278,7 @@ public class DiffractionGenerator extends Thread {
 	    }    
 	        
 	    long end=System.currentTimeMillis();    
-		IJ.log("duration: "+(end-start));
+		IJ.log("duration: "+(end-start)/1000);
 	    for (int i=0;i<nFrames;i++){
 	        	resultStack.addSlice(res_ip[i]);
 	    }
@@ -390,7 +390,7 @@ public class DiffractionGenerator extends Thread {
 	    	return stack;
 	    }
 	    public DiffractionGenerator [] getArray() {
-			IJ.log("Start: getArray");
+//			IJ.log("Start: getArray");
 	    	DiffractionGenerator array []=new DiffractionGenerator[n_cpus];
 			
 			int stackSize=tg.getStackSize();
@@ -412,7 +412,7 @@ public class DiffractionGenerator extends Thread {
 					start[i]=stop[i-1]+1;
 					stop[i]=start[i]+delta;
 				}
-				IJ.log("i="+i+"start="+start[i]+"   stop"+stop[i]);
+//				IJ.log("i="+i+"start="+start[i]+"   stop"+stop[i]);
 				array[i]=new DiffractionGenerator(this.tg,start[i],stop[i],this.dd);
 				array[i].setPhotons(this.getPhotons());
 			}

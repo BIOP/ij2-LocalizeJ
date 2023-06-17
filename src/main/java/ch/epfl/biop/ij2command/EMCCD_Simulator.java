@@ -15,7 +15,10 @@ public class EMCCD_Simulator extends DetectorSimulator {
 		super(pixelSize,exposureTime,quantumEff/2, ip);
 		
 	}
-		
+	public EMCCD_Simulator(double gain){
+		super(0.46,0.001,0.0018,0.105*gain,10);
+		this.gainfactor=gain;
+	}	
 	public EMCCD_Simulator(ImagePlus imp, double gain){
 		super(imp,0.46,0.001,0.0018,0.105*gain,10);
 		this.gainfactor=gain;
@@ -37,32 +40,39 @@ public class EMCCD_Simulator extends DetectorSimulator {
 		// TODO Auto-generated constructor stub
 	}
 
+	public EMCCD_Simulator(ImagePlus multiThreadCalculate, EMCCD_Simulator emccd) {
+		
+	}
+
 	public ImagePlus run(){
-		int slice=super.getImagePlus().getStackSize();
+		
 		super.setTitle("EM CCD Camera");
-		if (slice==1){
-			this.setImageProcessor(this.PoissonNoise());
-			this.setImageProcessor(this.Bimodal());
-			this.setImageProcessor(this.EMGain(gainfactor));
-			this.setImageProcessor(this.ReadNoise());
-			this.cam_imp.setProcessor(this.cam_ip);
-		}
-		else {
+		
+		this.setImageProcessor(this.PoissonNoise());
+		this.setImageProcessor(this.Bimodal());
+		this.setImageProcessor(this.EMGain(gainfactor));
+		this.setImageProcessor(this.ReadNoise());
+		if (cam_imp==null) cam_imp=new ImagePlus(this.getTitle(),this.cam_ip);
+		else this.cam_imp.setProcessor(this.cam_ip);
+		
+		return this.getImagePlus();
+		
+	}
+	public ImagePlus run(ImagePlus imp) {
+		int slice=imp.getStackSize();
+		ImageStack stack=imp.createEmptyStack();
 			
-			ImageStack stack=this.getImagePlus().createEmptyStack();
-			
-			for (int i=1;i<=slice;i++){
-				IJ.showProgress(i/slice);
+		for (int i=1;i<=slice;i++){
+			IJ.showProgress(i/slice);
 				
-				this.getImagePlus().setSliceWithoutUpdate(i);
-				EMCCD_Simulator ccd=new EMCCD_Simulator(this.getProcessor().duplicate(),this.getQuantumEff(),this.getCalibration());
+			imp.setSliceWithoutUpdate(i);
+			this.setImageProcessor(imp.getProcessor());
 
-					ccd.run();
-					stack.addSlice(ccd.getProcessor());
+			this.run();
+			stack.addSlice(this.getProcessor());
 
-			}
-			this.setImagePlus(stack);
 		}
+		this.setImagePlus(stack);
 		return this.getImagePlus();
 	}
 	

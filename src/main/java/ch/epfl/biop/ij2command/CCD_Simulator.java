@@ -18,6 +18,9 @@ public class CCD_Simulator extends DetectorSimulator {
 	public CCD_Simulator(ImagePlus imp){
 		super(imp,0.7,0.0005,0.001,6,10);
 	}
+	public CCD_Simulator(){
+		super(0.7,0.0005,0.001,6,10);
+	}
 	
 	public CCD_Simulator(ImagePlus imp, double quant, double dark, double cic, double read, double exp){
 		super(imp,quant,dark,cic,read,exp);
@@ -34,36 +37,43 @@ public class CCD_Simulator extends DetectorSimulator {
 		super(ip,cd.quant,cd.dark,cd.cic,cd.read,cd.exp, cal);
 		this.cd=cd;
 	}
-	public CCD_Simulator() {
-		super();
+	
+	public CCD_Simulator(ImagePlus multiThreadCalculate, CCD_Simulator ccd) {
+		
 	}
 	public ImagePlus run(){
-		int slice=super.getImagePlus().getStackSize();
+		
 		super.setTitle("CCD Camera");
-		if (slice==1){
+		
 			this.setImageProcessor(this.PoissonNoise());
 			this.setImageProcessor(this.Bimodal());
 			this.setImageProcessor(this.ReadNoise());
-			this.cam_imp.setProcessor(this.cam_ip);
-		}
-		else {
-			
-			ImageStack stack=this.getImagePlus().createEmptyStack();
+			if (cam_imp==null) cam_imp=new ImagePlus(this.getTitle(),this.cam_ip); 
+			else this.cam_imp.setProcessor(this.cam_ip);
+		
+		return this.getImagePlus();
+	}
+	
+	public ImagePlus run(ImagePlus imp) {
+		int slice=imp.getStackSize();
+		ImageStack stack=imp.createEmptyStack();
 
 			for (int i=1;i<=slice;i++){
 				IJ.showProgress(i/slice);
 				
-				this.getImagePlus().setSliceWithoutUpdate(i);
-				CCD_Simulator ccd=new CCD_Simulator(this.getProcessor().duplicate(),this.cd,this.getCalibration());
+				imp.setSliceWithoutUpdate(i);
+				this.setImageProcessor(imp.getProcessor());
+				
 
-					ccd.run();
-					stack.addSlice(ccd.getProcessor());
+					this.run();
+					stack.addSlice(this.getProcessor());
+					this.reset();
 //					ImagePlus test=new ImagePlus("test",stack);
 //					test.show();
 
 			}
 			this.setImagePlus(stack);
-		}
+		
 		return this.getImagePlus();
 	}
 	
