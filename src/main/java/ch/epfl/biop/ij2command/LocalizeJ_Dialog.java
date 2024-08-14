@@ -44,7 +44,7 @@ public class LocalizeJ_Dialog implements Command {
     
 //    @Parameter
 //    int band;
-    @Parameter(label="photoflux in photons/molecule")
+    @Parameter(label="photoflux in photons per molecule")
     int photons;
     
     @Parameter(label="# of molecules")

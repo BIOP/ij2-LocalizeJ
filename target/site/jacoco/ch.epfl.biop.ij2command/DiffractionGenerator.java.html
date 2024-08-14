@@ -24,7 +24,7 @@ public class DiffractionGenerator extends Thread {
 	private ImageStack timeStack;
 	private TimeGenerator tg;
 	private static ImageProcessor ip_time;
-<span class="nc" id="L27">	private static ImageProcessor ip_psf; </span>
+	private static ImageProcessor ip_psf; 
 	private ImageProcessor [] res_ip;
 	
 	private int nFrames;
@@ -375,7 +375,7 @@ public class DiffractionGenerator extends Thread {
 <span class="nc" id="L375">	        } catch (InterruptedException ie)  </span>
 	        {  
 <span class="nc" id="L377">	            throw new RuntimeException(ie);  </span>
-	        }  
+<span class="nc" id="L378">	        }  </span>
 <span class="nc" id="L379">	    }</span>
 	    public static ImageStack getResultStack(DiffractionGenerator [] diffArray){
 <span class="nc" id="L381">	    	int w=diffArray[0].width/diffArray[0].scaleFactor;</span>
