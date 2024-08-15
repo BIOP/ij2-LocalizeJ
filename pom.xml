@@ -8,7 +8,7 @@
 	<parent>
 		<groupId>org.scijava</groupId>
 		<artifactId>pom-scijava</artifactId>
-		<version>33.1.0</version>
+		<version>38.0.1</version>
 		<relativePath />
 	</parent>
 
@@ -154,7 +154,7 @@
 
 	<properties>
 		<package-name>ch.epfl.biop.ij2command</package-name>
-		<main-class>ch.epfl.biop.ij2command.LocalizeJ</main-class>
+		<main-class>ch.epfl.biop.ij2command.LocalizeJ_Dialog</main-class>
 		<license.licenseName>gpl_v3</license.licenseName>
 		<license.copyrightOwners>EPFL</license.copyrightOwners>
 		<!--scijava.app.directory>C:/Fiji.app</scijava.app.directory>
